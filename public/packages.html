@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>প্যাকেজ সমূহ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 pb-16">
+    <header class="bg-blue-600 text-white p-4 text-center">প্যাকেজ কিনুন</header>
+    <div id="packages" class="p-4 space-y-3"></div>
+    <nav class="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2">
+        <button onclick="location.href='index.html'">🏠 হোম</button>
+        <button onclick="location.href='packages.html'">📦 প্যাকেজ</button>
+        <button onclick="location.href='withdraw.html'">💰 উত্তোলন</button>
+        <button onclick="location.href='profile.html'">👤 প্রোফাইল</button>
+        <button onclick="location.href='support.html'">🆘 সাপোর্ট</button>
+    </nav>
+    <script>
+        const token = localStorage.getItem('authToken');
+        if (!token) window.location.href = 'login.html';
+        
+        async function loadPackages() {
+            const res = await fetch('/api/packages');
+            const pkgs = await res.json();
+            const container = document.getElementById('packages');
+            container.innerHTML = pkgs.map(p => `
+                <div class="bg-white p-4 rounded shadow">
+                    <h3 class="font-bold text-xl">লেভেল ${p.level}</h3>
+                    <p>মূল্য: ${p.price} টাকা</p>
+                    <p>দৈনিক টাস্ক: ${p.daily_tasks}টি, প্রতি টাস্কে ${p.task_rate} টাকা</p>
+                    <p>ন্যূনতম উত্তোলন: ${p.min_withdraw} টাকা</p>
+                    <button onclick="buyPackage(${p.level})" class="mt-2 bg-green-600 text-white px-4 py-1 rounded">প্যাকেজ কিনুন</button>
+                </div>
+            `).join('');
+        }
+        
+        async function buyPackage(level) {
+            const txid = prompt('আপনার লেনদেন আইডি (TxID) দিন:');
+            if (!txid) return;
+            
+            const formData = new FormData();
+            formData.append('level', level);
+            formData.append('transactionId', txid);
+            
+            const res = await fetch('/api/request-package', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            if (res.ok) alert('আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করবেন।');
+            else alert('দুঃখিত, সমস্যা হয়েছে');
+        }
+        
+        loadPackages();
+    </script>
+</body>
+</html>

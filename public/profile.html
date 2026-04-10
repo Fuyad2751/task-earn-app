@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>প্রোফাইল</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 pb-16">
+    <header class="bg-blue-600 text-white p-4 text-center">আমার প্রোফাইল</header>
+    <div id="profile" class="p-4 space-y-2 bg-white m-4 rounded shadow"></div>
+    <button onclick="logout()" class="bg-red-500 text-white w-[90%] mx-auto block py-2 rounded">লগআউট</button>
+    <nav class="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2">
+        <button onclick="location.href='index.html'">🏠 হোম</button>
+        <button onclick="location.href='packages.html'">📦 প্যাকেজ</button>
+        <button onclick="location.href='withdraw.html'">💰 উত্তোলন</button>
+        <button onclick="location.href='profile.html'">👤 প্রোফাইল</button>
+        <button onclick="location.href='support.html'">🆘 সাপোর্ট</button>
+    </nav>
+    <script>
+        const token = localStorage.getItem('authToken');
+        if (!token) window.location.href = 'login.html';
+        
+        async function loadProfile() {
+            const res = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+            const p = await res.json();
+            document.getElementById('profile').innerHTML = `
+                <p><strong>ইউজার আইডি:</strong> ${p.username}</p>
+                <p><strong>মোবাইল:</strong> ${p.mobile}</p>
+                <p><strong>লেভেল:</strong> ${p.level}</p>
+                <p><strong>মোট উপার্জন:</strong> ${p.total_earnings} টাকা</p>
+                <p><strong>মোট উত্তোলন:</strong> ${p.total_withdrawn} টাকা</p>
+                <p><strong>বর্তমান ব্যালেন্স:</strong> ${p.balance} টাকা</p>
+                <p><strong>আইডির অবস্থা:</strong> ${p.status}</p>
+                <p><strong>আপনার রেফারেল কোড:</strong> ${p.referral_code}</p>
+            `;
+        }
+        
+        function logout() { localStorage.removeItem('authToken'); window.location.href = 'login.html'; }
+        loadProfile();
+    </script>
+</body>
+</html>

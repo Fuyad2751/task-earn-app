@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>রেজিস্টার</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+    <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
+        <h2 class="text-2xl font-bold mb-4">রেজিস্টার</h2>
+        <input type="text" id="username" placeholder="ইউজারনেম" class="w-full border p-2 mb-3 rounded">
+        <input type="password" id="password" placeholder="পাসওয়ার্ড" class="w-full border p-2 mb-3 rounded">
+        <input type="text" id="mobile" placeholder="মোবাইল" class="w-full border p-2 mb-3 rounded">
+        <input type="text" id="refCode" placeholder="রেফারেল কোড" class="w-full border p-2 mb-3 rounded">
+        <button onclick="register()" class="bg-green-600 text-white w-full py-2 rounded">রেজিস্টার</button>
+        <p class="mt-3">ইতিমধ্যে ইউজার? <a href="login.html">লগইন করুন</a></p>
+    </div>
+    <script>
+        async function register() {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    username: document.getElementById('username').value,
+                    password: document.getElementById('password').value,
+                    mobile: document.getElementById('mobile').value,
+                    referralCode: document.getElementById('refCode').value
+                })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                localStorage.setItem('authToken', data.token);
+                alert('রেজিস্টার সফল!');
+                window.location.href = 'dashboard.html';
+            } else {
+                alert('ইউজারনেম আগেই আছে');
+            }
+        }
+    </script>
+</body>
+</html>

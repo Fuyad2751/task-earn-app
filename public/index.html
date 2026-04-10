@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>টাস্ক কিং</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 pb-16">
+    <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold">
+        টাস্ক কিং
+    </header>
+
+    <div class="bg-white m-4 p-3 rounded shadow">
+        <h2 class="font-bold text-lg">📢 লাইভ উত্তোলন</h2>
+        <div id="liveList" class="text-sm text-gray-600 space-y-1 mt-2"></div>
+    </div>
+
+    <nav class="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2 shadow-lg">
+        <button onclick="location.href='index.html'" class="flex flex-col items-center text-blue-600">🏠 <span class="text-xs">হোম</span></button>
+        <button onclick="location.href='packages.html'" class="flex flex-col items-center text-gray-600">📦 <span class="text-xs">প্যাকেজ</span></button>
+        <button onclick="location.href='withdraw.html'" class="flex flex-col items-center text-gray-600">💰 <span class="text-xs">উত্তোলন</span></button>
+        <button onclick="location.href='profile.html'" class="flex flex-col items-center text-gray-600">👤 <span class="text-xs">প্রোফাইল</span></button>
+        <button onclick="location.href='support.html'" class="flex flex-col items-center text-gray-600">🆘 <span class="text-xs">সাপোর্ট</span></button>
+    </nav>
+
+    <div class="p-4 text-center">
+        <p class="text-gray-500">স্বাগতম! উপার্জন শুরু করতে <a href="login.html" class="text-blue-600">লগইন</a> করুন।</p>
+    </div>
+
+    <script>
+        async function loadLive() {
+            const res = await fetch('/api/live-withdrawals');
+            const data = await res.json();
+            const div = document.getElementById('liveList');
+            div.innerHTML = data.map(w => `<div>${w.username} - ${w.amount} টাকা উত্তোলন করেছেন (${new Date(w.created_at).toLocaleTimeString()})</div>`).join('');
+        }
+        loadLive();
+        setInterval(loadLive, 10000);
+    </script>
+</body>
+</html>

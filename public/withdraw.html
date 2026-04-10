@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>উত্তোলন</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 pb-16">
+    <header class="bg-blue-600 text-white p-4 text-center">উত্তোলন করুন</header>
+    <div class="p-4">
+        <input type="number" id="amount" placeholder="টাকার পরিমাণ" class="w-full border p-2 rounded mb-3">
+        <button onclick="requestWithdraw()" class="bg-yellow-600 text-white w-full py-2 rounded">উত্তোলনের আবেদন</button>
+        <p id="msg" class="text-sm mt-2 text-red-500"></p>
+    </div>
+    <nav class="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2">
+        <button onclick="location.href='index.html'">🏠 হোম</button>
+        <button onclick="location.href='packages.html'">📦 প্যাকেজ</button>
+        <button onclick="location.href='withdraw.html'">💰 উত্তোলন</button>
+        <button onclick="location.href='profile.html'">👤 প্রোফাইল</button>
+        <button onclick="location.href='support.html'">🆘 সাপোর্ট</button>
+    </nav>
+    <script>
+        const token = localStorage.getItem('authToken');
+        if (!token) window.location.href = 'login.html';
+        
+        async function requestWithdraw() {
+            const amount = document.getElementById('amount').value;
+            const res = await fetch('/api/request-withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ amount: parseFloat(amount) })
+            });
+            const data = await res.json();
+            if (res.ok) alert('আবেদন জমা হয়েছে। ১-২৪ ঘন্টার মধ্যে প্রক্রিয়া করা হবে।');
+            else document.getElementById('msg').innerText = data.error;
+        }
+    </script>
+</body>
+</html>
