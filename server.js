@@ -1,6 +1,6 @@
 const express = require('express');
 const { Pool } = require('pg');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
@@ -35,8 +35,8 @@ function authenticate(req, res, next) {
 }
 
 async function isAdmin(req, res, next) {
-  const user = await pool.query('SELECT username FROM users WHERE id=$1', [req.user.id]);
-  if (user.rows[0]?.username === process.env.ADMIN_USERNAME) return next();
+  const user = await pool.query('SELECT role FROM users WHERE id=$1', [req.user.id]);
+  if (user.rows[0]?.role === 'admin') return next();
   res.status(403).json({ error: 'Admin only' });
 }
 
@@ -234,4 +234,5 @@ app.post('/admin/toggle-user-status', authenticate, isAdmin, async (req, res) =>
   res.json({ success: true });
 });
 
-app.listen(process.env.PORT, () => console.log(`Server running on port ${process.env.PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
