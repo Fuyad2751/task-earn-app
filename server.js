@@ -597,3 +597,29 @@ async function distributeTaskCommission(userId, taskReward, taskLevel) {
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.post('/api/request-package', authenticate, async (req, res) => {
+  const { level, transactionId, useBalance } = req.body;
+  const userId = req.user.id;
+  const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+  
+  if (user.rows[0].level >= parseInt(level)) {
+    return res.status(400).json({ error: 'You already have this level or higher' });
+  }
+  
+  const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
+  const amount = pkg.rows[0].price;
+  
+  // যদি ব্যালেন্স ব্যবহার করে কেনে, তাহলে ব্যালেন্স চেক করুন
+  if (useBalance) {
+    const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    if (balance < amount) {
+      return res.status(400).json({ error: 'Insufficient balance' });
+    }
+  }
+  
+  await pool.query(
+    'INSERT INTO purchase_requests (user_id, level, amount, transaction_id, status) VALUES ($1,$2,$3,$4,$5)',
+    [userId, level, amount, transactionId, 'pending']
+  );
+  res.json({ success: true, message: 'Request submitted. Admin will verify.' });
+});

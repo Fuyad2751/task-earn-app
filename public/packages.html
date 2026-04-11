@@ -25,11 +25,10 @@
             <p class="text-white/70">আপনার ব্যালেন্স থেকে প্যাকেজ কিনুন, কম পড়লে বাকি টাকার জন্য রিকোয়েস্ট করুন</p>
         </div>
 
-        <!-- Package Cards will be inserted here -->
         <div id="packagesList" class="space-y-4"></div>
     </div>
 
-    <!-- Balance Request Modal (Shows automatically when balance insufficient) -->
+    <!-- Balance Request Modal (শুধু ব্যালেন্স কম থাকলে দেখাবে) -->
     <div id="balanceRequestModal" class="fixed inset-0 bg-black/70 backdrop-blur z-50 hidden items-center justify-center p-4">
         <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700">
             <div class="flex justify-between items-center mb-4">
@@ -168,21 +167,30 @@
             }
 
             if (userBalance >= price) {
-                // ব্যালেন্স suficiente হলে সরাসরি প্যাকেজ ক্রয়ের আবেদন
-                const txid = prompt('আপনার ট্রানজাকশন আইডি (TxID) দিন:');
-                if (!txid) return;
-                const formData = new FormData();
-                formData.append('level', level);
-                formData.append('transactionId', txid);
+                // ✅ ব্যালেন্স suficiente হলে - সরাসরি প্যাকেজ ক্রয় (ট্রানজাকশন আইডি ছাড়া)
+                const confirmBuy = confirm(`আপনার ব্যালেন্সে ${price} টাকা আছে। আপনি কি লেভেল ${level} প্যাকেজটি কিনতে চান?`);
+                if (!confirmBuy) return;
+                
                 const res = await fetch('/api/request-package', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ 
+                        level: level, 
+                        transactionId: `BALANCE_${Date.now()}`,
+                        useBalance: true 
+                    })
                 });
-                if (res.ok) showSuccessModal('প্যাকেজ ক্রয়ের আবেদন জমা হয়েছে! অ্যাডমিন যাচাই করবেন।');
-                else alert('দুঃখিত, সমস্যা হয়েছে');
+                if (res.ok) {
+                    showSuccessModal(`লেভেল ${level} প্যাকেজ ক্রয়ের আবেদন জমা হয়েছে! অ্যাডমিন যাচাই করবেন।`);
+                } else {
+                    const error = await res.json();
+                    alert(error.error || 'দুঃখিত, সমস্যা হয়েছে');
+                }
             } else {
-                // ব্যালেন্স কম - বাকি টাকার জন্য রিকোয়েস্ট
+                // ❌ ব্যালেন্স কম - বাকি টাকার জন্য রিকোয়েস্ট
                 const needAmount = price - userBalance;
                 currentPackage = { level, price, needAmount };
                 document.getElementById('modalPackageLevel').innerText = level;
@@ -202,7 +210,9 @@
                 return;
             }
             const needAmount = currentPackage.needAmount;
-            const res = await fetch('/api/request-balance', {
+            
+            // প্রথমে ব্যালেন্স রিকোয়েস্ট করুন
+            const balanceRes = await fetch('/api/request-balance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ 
@@ -211,20 +221,31 @@
                     paymentMethod: 'mobile_banking' 
                 })
             });
-            if (res.ok) {
-                closeBalanceModal();
-                showSuccessModal(`${needAmount} টাকার ব্যালেন্স রিকোয়েস্ট জমা হয়েছে! অ্যাডমিন যাচাই করবেন।`);
-                // রিকোয়েস্টের পর প্যাকেজ ক্রয়ের আবেদনও করতে হবে
-                const formData = new FormData();
-                formData.append('level', currentPackage.level);
-                formData.append('transactionId', txId + '_package');
-                await fetch('/api/request-package', {
+            
+            if (balanceRes.ok) {
+                // তারপর প্যাকেজ ক্রয়ের আবেদন করুন
+                const packageRes = await fetch('/api/request-package', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
-                    body: formData
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}` 
+                    },
+                    body: JSON.stringify({ 
+                        level: currentPackage.level, 
+                        transactionId: txId + '_package',
+                        useBalance: false
+                    })
                 });
+                
+                if (packageRes.ok) {
+                    closeBalanceModal();
+                    showSuccessModal(`${needAmount} টাকার ব্যালেন্স রিকোয়েস্ট এবং লেভেল ${currentPackage.level} প্যাকেজের আবেদন জমা হয়েছে! অ্যাডমিন যাচাই করবেন।`);
+                    loadUserData();
+                } else {
+                    alert('প্যাকেজ আবেদন জমা দিতে সমস্যা হয়েছে');
+                }
             } else {
-                alert('রিকোয়েস্ট জমা দিতে সমস্যা হয়েছে');
+                alert('ব্যালেন্স রিকোয়েস্ট জমা দিতে সমস্যা হয়েছে');
             }
         }
 
@@ -237,7 +258,7 @@
             document.getElementById('successMessage').innerText = message;
             document.getElementById('successModal').style.display = 'flex';
             document.getElementById('successModal').classList.remove('hidden');
-            setTimeout(() => closeSuccessModal(), 3000);
+            setTimeout(() => closeSuccessModal(), 4000);
         }
 
         function closeSuccessModal() {
