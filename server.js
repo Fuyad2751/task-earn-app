@@ -468,3 +468,260 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// রেজিস্ট্রেশন API - রেফারেল কোড সহ
+app.post('/api/register', async (req, res) => {
+  const { username, password, mobile, referralCode } = req.body;
+  
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    const refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+    let referrerId = null;
+    let referrerLevel = 0;
+    
+    // রেফারেল কোড চেক করুন
+    if (referralCode && referralCode.trim() !== '') {
+      const refUser = await pool.query(
+        'SELECT id, level FROM users WHERE referral_code = $1', 
+        [referralCode.toUpperCase()]
+      );
+      if (refUser.rows.length > 0) {
+        referrerId = refUser.rows[0].id;
+        referrerLevel = refUser.rows[0].level;
+      }
+    }
+    
+    // নতুন ইউজার তৈরি করুন
+    const result = await pool.query(
+      `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level) 
+       VALUES ($1, $2, $3, $4, $5, 1) RETURNING id, username`,
+      [username, hashed, mobile, refCode, referrerId]
+    );
+    
+    const newUserId = result.rows[0].id;
+    const token = jwt.sign({ id: newUserId, username }, process.env.JWT_SECRET);
+    
+    res.json({ 
+      token, 
+      username,
+      message: referrerId ? 'রেফারেল কোড সফলভাবে যুক্ত হয়েছে' : 'অ্যাকাউন্ট তৈরি সম্পন্ন'
+    });
+    
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(400).json({ error: 'Username already exists or invalid data' });
+  }
+});
+// প্যাকেজ অ্যাপ্রুভ করার API - রেফারেল কমিশন সহ
+app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
+  const { requestId } = req.body;
+  const adminId = req.user.id;
+  
+  try {
+    const request = await pool.query(
+      'SELECT user_id, level, amount FROM purchase_requests WHERE id=$1 AND status=$2',
+      [requestId, 'pending']
+    );
+    if (request.rows.length === 0) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    
+    const { user_id, level, amount } = request.rows[0];
+    
+    // ইউজারের লেভেল আপডেট করুন
+    await pool.query(
+      'UPDATE users SET level=$1 WHERE id=$2 AND level<$1',
+      [level, user_id]
+    );
+    
+    // রেফারেল কমিশন বিতরণ করুন (৩ জেনারেশন পর্যন্ত)
+    await distributePackageCommission(user_id, level, amount);
+    
+    // রিকোয়েস্ট আপডেট করুন
+    await pool.query(
+      `UPDATE purchase_requests 
+       SET status='approved', verified_by=$1, verified_at=NOW() 
+       WHERE id=$2`,
+      [adminId, requestId]
+    );
+    
+    res.json({ success: true });
+    
+  } catch (err) {
+    console.error('Package approval error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// প্যাকেজ কমিশন বিতরণ ফাংশন
+async function distributePackageCommission(userId, newLevel, packageAmount) {
+  try {
+    // ইউজারের রেফারার খুঁজুন
+    const user = await pool.query(
+      'SELECT referrer_id, level FROM users WHERE id=$1',
+      [userId]
+    );
+    
+    let currentReferrerId = user.rows[0]?.referrer_id;
+    let generation = 1;
+    
+    // কমিশনের হার: 1st=10%, 2nd=5%, 3rd=2%
+    const commissionRates = { 1: 0.10, 2: 0.05, 3: 0.02 };
+    
+    while (currentReferrerId && generation <= 3) {
+      // রেফারারের তথ্য নিন
+      const referrer = await pool.query(
+        'SELECT id, level, username FROM users WHERE id=$1',
+        [currentReferrerId]
+      );
+      
+      if (referrer.rows.length > 0) {
+        const referrerId = referrer.rows[0].id;
+        const referrerLevel = referrer.rows[0].level;
+        
+        // শর্ত: রেফারারের লেভেল নতুন ইউজারের লেভেলের সমান বা বেশি হতে হবে
+        if (referrerLevel >= newLevel) {
+          const commission = packageAmount * commissionRates[generation];
+          
+          if (commission > 0) {
+            // কমিশন রেকর্ড করুন
+            await pool.query(
+              `INSERT INTO referral_commissions 
+               (referrer_id, referred_user_id, commission_type, amount, level_gap, created_at) 
+               VALUES ($1, $2, $3, $4, $5, NOW())`,
+              [referrerId, userId, 'package', commission, generation]
+            );
+            
+            // রেফারারের ব্যালেন্স আপডেট করুন
+            await pool.query(
+              'UPDATE users SET total_earnings = total_earnings + $1 WHERE id=$2',
+              [commission, referrerId]
+            );
+            
+            console.log(`${generation}st gen commission: ${commission} to ${referrer.rows[0].username}`);
+          }
+        }
+      }
+      
+      // পরবর্তী রেফারারের জন্য
+      const nextUser = await pool.query(
+        'SELECT referrer_id FROM users WHERE id=$1',
+        [currentReferrerId]
+      );
+      currentReferrerId = nextUser.rows[0]?.referrer_id;
+      generation++;
+    }
+    
+  } catch (err) {
+    console.error('Commission distribution error:', err);
+  }
+}
+// টাস্ক কমপ্লিটের সময় রেফারেল কমিশন
+app.post('/api/complete-task', authenticate, async (req, res) => {
+  const { taskId } = req.body;
+  const userId = req.user.id;
+  const today = new Date().toISOString().slice(0,10);
+  
+  try {
+    const task = await pool.query('SELECT level, points_reward FROM tasks WHERE id=$1', [taskId]);
+    if (task.rows.length === 0) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+    
+    const taskLevel = task.rows[0].level;
+    const reward = parseFloat(task.rows[0].points_reward);
+    
+    // ইউজারের লেভেল চেক করুন
+    const user = await pool.query('SELECT level FROM users WHERE id=$1', [userId]);
+    if (user.rows[0].level < taskLevel) {
+      return res.status(403).json({ error: 'Level mismatch' });
+    }
+    
+    // টাস্ক ইতিমধ্যে কমপ্লিট কিনা চেক করুন
+    const done = await pool.query(
+      'SELECT id FROM user_daily_tasks WHERE user_id=$1 AND task_id=$2 AND completed_date=$3',
+      [userId, taskId, today]
+    );
+    if (done.rows.length) {
+      return res.status(400).json({ error: 'Task already completed today' });
+    }
+    
+    // টাস্ক কমপ্লিট লগ করুন
+    await pool.query(
+      'INSERT INTO user_daily_tasks (user_id, task_id, completed_date, earned) VALUES ($1,$2,$3,$4)',
+      [userId, taskId, today, reward]
+    );
+    
+    // ইউজারের ব্যালেন্স আপডেট করুন
+    await pool.query(
+      'UPDATE users SET total_earnings = total_earnings + $1 WHERE id=$2',
+      [reward, userId]
+    );
+    
+    // দৈনিক আয় ট্র্যাক করুন
+    const dailyKey = `dailyEarning_${userId}`;
+    const currentDaily = JSON.parse(localStorage.getItem(dailyKey) || '0');
+    localStorage.setItem(dailyKey, currentDaily + reward);
+    
+    // রেফারেল কমিশন বিতরণ করুন (টাস্কের জন্য)
+    await distributeTaskCommission(userId, reward, taskLevel);
+    
+    res.json({ success: true, earned: reward });
+    
+  } catch (err) {
+    console.error('Task completion error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// টাস্ক কমিশন বিতরণ ফাংশন
+async function distributeTaskCommission(userId, taskReward, taskLevel) {
+  try {
+    const user = await pool.query('SELECT referrer_id, level FROM users WHERE id=$1', [userId]);
+    let currentReferrerId = user.rows[0]?.referrer_id;
+    let generation = 1;
+    
+    // টাস্ক কমিশনের হার: 1st=5%, 2nd=2%, 3rd=1%
+    const commissionRates = { 1: 0.05, 2: 0.02, 3: 0.01 };
+    
+    while (currentReferrerId && generation <= 3) {
+      const referrer = await pool.query(
+        'SELECT id, level, username FROM users WHERE id=$1',
+        [currentReferrerId]
+      );
+      
+      if (referrer.rows.length > 0) {
+        const referrerId = referrer.rows[0].id;
+        const referrerLevel = referrer.rows[0].level;
+        
+        // শর্ত: রেফারারের লেভেল ইউজারের লেভেলের সমান বা বেশি হতে হবে
+        if (referrerLevel >= taskLevel) {
+          const commission = taskReward * commissionRates[generation];
+          
+          if (commission > 0) {
+            await pool.query(
+              `INSERT INTO referral_commissions 
+               (referrer_id, referred_user_id, commission_type, amount, level_gap, created_at) 
+               VALUES ($1, $2, $3, $4, $5, NOW())`,
+              [referrerId, userId, 'daily_task', commission, generation]
+            );
+            
+            await pool.query(
+              'UPDATE users SET total_earnings = total_earnings + $1 WHERE id=$2',
+              [commission, referrerId]
+            );
+          }
+        }
+      }
+      
+      const nextUser = await pool.query(
+        'SELECT referrer_id FROM users WHERE id=$1',
+        [currentReferrerId]
+      );
+      currentReferrerId = nextUser.rows[0]?.referrer_id;
+      generation++;
+    }
+    
+  } catch (err) {
+    console.error('Task commission error:', err);
+  }
+}
