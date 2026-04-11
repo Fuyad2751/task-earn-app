@@ -671,3 +671,183 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ============ উত্তোলন একাউন্ট API ============
+
+// ইউজার: উত্তোলন একাউন্ট তৈরি করুন
+app.post('/api/create-withdrawal-account', authenticate, async (req, res) => {
+  const { accountName, accountNumber, accountType, withdrawPassword } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    if (!accountName || !accountNumber || !withdrawPassword) {
+      return res.status(400).json({ error: 'সব ঘর পূরণ করুন' });
+    }
+    
+    // আগের একাউন্ট চেক করুন
+    const existing = await pool.query(
+      'SELECT id FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true',
+      [userId]
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'আপনার ইতিমধ্যে একটি একাউন্ট আছে। পরিবর্তন করতে অ্যাডমিনে যোগাযোগ করুন।' });
+    }
+    
+    await pool.query(
+      `INSERT INTO withdrawal_accounts (user_id, account_name, account_number, account_type, withdraw_password, is_active, is_verified, requested_at) 
+       VALUES ($1, $2, $3, $4, $5, true, false, NOW())`,
+      [userId, accountName, accountNumber, accountType || 'bkash', withdrawPassword]
+    );
+    
+    res.json({ success: true, message: 'উত্তোলন একাউন্ট তৈরি করা হয়েছে। অ্যাডমিন যাচাই করবেন।' });
+    
+  } catch (err) {
+    console.error('Create account error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ইউজার: আমার উত্তোলন একাউন্ট দেখুন
+app.get('/api/my-withdrawal-account', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    const account = await pool.query(
+      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true',
+      [userId]
+    );
+    res.json(account.rows[0] || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// অ্যাডমিন: পেন্ডিং উত্তোলন একাউন্ট দেখুন
+app.get('/admin/pending-withdrawal-accounts', authenticate, isAdmin, async (req, res) => {
+  try {
+    const accounts = await pool.query(`
+      SELECT wa.*, u.username, u.mobile 
+      FROM withdrawal_accounts wa
+      JOIN users u ON u.id = wa.user_id
+      WHERE wa.is_verified = false
+      ORDER BY wa.requested_at ASC
+    `);
+    res.json(accounts.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// অ্যাডমিন: উত্তোলন একাউন্ট ভেরিফাই করুন
+app.post('/admin/verify-withdrawal-account', authenticate, isAdmin, async (req, res) => {
+  const { accountId } = req.body;
+  
+  try {
+    await pool.query(
+      'UPDATE withdrawal_accounts SET is_verified = true, verified_at = NOW() WHERE id = $1',
+      [accountId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// অ্যাডমিন: উত্তোলন একাউন্ট নিষ্ক্রিয় করুন
+app.post('/admin/deactivate-withdrawal-account', authenticate, isAdmin, async (req, res) => {
+  const { accountId } = req.body;
+  
+  try {
+    await pool.query(
+      'UPDATE withdrawal_accounts SET is_active = false WHERE id = $1',
+      [accountId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// আপডেটেড উত্তোলন রিকোয়েস্ট API
+app.post('/api/request-withdraw', authenticate, async (req, res) => {
+  const { amount, withdrawPassword } = req.body;
+  const userId = req.user.id;
+  const today = new Date().toISOString().slice(0,10);
+  
+  try {
+    // উত্তোলন একাউন্ট চেক করুন
+    const account = await pool.query(
+      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true AND is_verified = true',
+      [userId]
+    );
+    
+    if (account.rows.length === 0) {
+      return res.status(400).json({ error: 'আপনার উত্তোলন একাউন্ট নেই বা ভেরিফাই করা হয়নি' });
+    }
+    
+    // পাসওয়ার্ড চেক করুন
+    if (account.rows[0].withdraw_password !== withdrawPassword) {
+      return res.status(400).json({ error: 'উত্তোলন পাসওয়ার্ড ভুল!' });
+    }
+    
+    // দিনে একবার উত্তোলন চেক করুন
+    const todayWithdraw = await pool.query(
+      'SELECT id FROM withdrawal_requests WHERE user_id = $1 AND DATE(requested_at) = $2',
+      [userId, today]
+    );
+    
+    if (todayWithdraw.rows.length > 0) {
+      return res.status(400).json({ error: 'আপনি আজ ইতিমধ্যে একটি উত্তোলন আবেদন করেছেন। আগামীকাল চেষ্টা করুন।' });
+    }
+    
+    // ইউজারের লেভেল ও ব্যালেন্স চেক
+    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    const pkg = await pool.query('SELECT min_withdraw FROM level_packages WHERE level=$1', [user.rows[0].level]);
+    const minWithdraw = parseFloat(pkg.rows[0].min_withdraw);
+    
+    if (amount < minWithdraw) {
+      return res.status(400).json({ error: `ন্যূনতম উত্তোলন ${minWithdraw} টাকা` });
+    }
+    
+    const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    if (balance < amount) {
+      return res.status(400).json({ error: 'পর্যাপ্ত ব্যালেন্স নেই' });
+    }
+    
+    // উত্তোলন ফি (10%)
+    const fee = amount * 0.10;
+    const netAmount = amount - fee;
+    
+    await pool.query(
+      `INSERT INTO withdrawal_requests (user_id, amount, fee, net_amount, account_id, withdraw_password, status, requested_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())`,
+      [userId, amount, fee, netAmount, account.rows[0].id, withdrawPassword]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: `উত্তোলন আবেদন জমা হয়েছে। ফি সহ প্রাপ্ত টাকা: ${netAmount} টাকা। ২৪ ঘন্টার মধ্যে প্রেরণ করা হবে।` 
+    });
+    
+  } catch (err) {
+    console.error('Withdraw request error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// অ্যাডমিন: পেন্ডিং উত্তোলন রিকোয়েস্ট (একাউন্ট তথ্য সহ)
+app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) => {
+  try {
+    const pending = await pool.query(`
+      SELECT wr.*, u.username, u.mobile, wa.account_name, wa.account_number, wa.account_type
+      FROM withdrawal_requests wr
+      JOIN users u ON u.id = wr.user_id
+      JOIN withdrawal_accounts wa ON wa.id = wr.account_id
+      WHERE wr.status = 'pending'
+      ORDER BY wr.requested_at ASC
+    `);
+    res.json(pending.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

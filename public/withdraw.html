@@ -2,54 +2,245 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>উত্তোলন</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>উত্তোলন - টাস্ক কিং</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 </head>
-<body class="bg-gray-100 pb-16">
-    <header class="bg-blue-600 text-white p-4 text-center">উত্তোলন করুন</header>
-    <div class="p-4">
-        <input type="number" id="amount" placeholder="টাকার পরিমাণ" class="w-full border p-2 rounded mb-3">
-        <button onclick="requestWithdraw()" class="bg-yellow-600 text-white w-full py-2 rounded">উত্তোলনের আবেদন</button>
-        <p id="msg" class="text-sm mt-2 text-red-500"></p>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
+
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2"><i class="fas fa-hand-holding-usd text-2xl"></i><span class="text-xl font-bold">উত্তোলন</span></div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm bg-white/20 px-3 py-1 rounded-full"><i class="fas fa-chart-simple mr-1"></i> লেভেল <span id="userLevel">১</span></span>
+                <span class="text-sm bg-yellow-500/30 px-3 py-1 rounded-full"><i class="fas fa-coins mr-1"></i> <span id="userBalance">০</span> টাকা</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 max-w-2xl">
+        
+        <!-- Account Setup Section -->
+        <div id="accountSetupSection" class="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 mb-6">
+            <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-plus-circle mr-2 text-green-400"></i> উত্তোলন একাউন্ট তৈরি করুন</h2>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-white mb-2">একাউন্টের নাম</label>
+                    <input type="text" id="accName" placeholder="আপনার পুরো নাম" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-green-400">
+                </div>
+                <div>
+                    <label class="block text-white mb-2">মোবাইল ব্যাংকিং একাউন্ট নম্বর</label>
+                    <input type="text" id="accNumber" placeholder="যেমন: 01XXXXXXXXX" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-green-400">
+                </div>
+                <div>
+                    <label class="block text-white mb-2">একাউন্ট টাইপ</label>
+                    <select id="accType" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-green-400">
+                        <option value="bkash">বিকাশ (bKash)</option>
+                        <option value="nagad">নগদ (Nagad)</option>
+                        <option value="rocket">রকেট (Rocket)</option>
+                        <option value="bank">ব্যাংক একাউন্ট</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-white mb-2">উত্তোলন পাসওয়ার্ড (প্রতি উত্তোলনে প্রয়োজন)</label>
+                    <input type="password" id="withdrawPass" placeholder="********" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-green-400">
+                </div>
+                <button onclick="createWithdrawalAccount()" class="w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-teal-600 transition shadow-lg">
+                    <i class="fas fa-save mr-2"></i> একাউন্ট তৈরি করুন
+                </button>
+            </div>
+        </div>
+
+        <!-- Withdraw Section -->
+        <div id="withdrawSection" class="hidden bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 mb-6">
+            <h2 class="text-xl font-bold text-white mb-4"><i class="fas fa-money-bill-wave mr-2 text-yellow-400"></i> উত্তোলন আবেদন</h2>
+            
+            <div id="accountInfo" class="bg-white/5 rounded-xl p-4 mb-4">
+                <p class="text-gray-300 text-sm">আপনার উত্তোলন একাউন্ট</p>
+                <p class="text-white font-bold" id="displayAccountName">-</p>
+                <p class="text-yellow-400 text-sm" id="displayAccountNumber">-</p>
+            </div>
+            
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-white mb-2">উত্তোলনের পরিমাণ (টাকা)</label>
+                    <input type="number" id="withdrawAmount" placeholder="ন্যূনতম উত্তোলন দেখুন" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                </div>
+                <div id="feeInfo" class="bg-yellow-500/20 rounded-xl p-3 text-center">
+                    <p class="text-yellow-400">উত্তোলন ফি: ১০%</p>
+                    <p class="text-white" id="netAmountInfo">আপনি পাবেন: ০ টাকা</p>
+                </div>
+                <div>
+                    <label class="block text-white mb-2">উত্তোলন পাসওয়ার্ড</label>
+                    <input type="password" id="withdrawPassword" placeholder="********" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                </div>
+                <button onclick="submitWithdraw()" class="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold py-3 rounded-xl hover:from-yellow-600 hover:to-orange-600 transition shadow-lg">
+                    <i class="fas fa-paper-plane mr-2"></i> উত্তোলন আবেদন করুন
+                </button>
+            </div>
+        </div>
+
+        <div id="messageArea" class="hidden rounded-xl p-4 mb-4"></div>
     </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black/70 backdrop-blur z-50 hidden items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full text-center border border-gray-700">
+            <div class="bg-green-500 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-check-circle text-3xl text-white"></i>
+            </div>
+            <h3 class="text-xl font-bold text-white mb-2" id="successMessage">সফল!</h3>
+            <button onclick="closeSuccessModal()" class="mt-4 bg-yellow-500 text-white px-6 py-2 rounded-lg hover:bg-yellow-600 transition">ঠিক আছে</button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
-    <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-home text-xl"></i>
-        <span class="text-xs">হোম</span>
-    </a>
-    <a href="dashboard.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-tasks text-xl"></i>
-        <span class="text-xs">টাস্ক</span>
-    </a>
-    <a href="packages.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-box text-xl"></i>
-        <span class="text-xs">প্যাকেজ</span>
-    </a>
-    <a href="withdraw.html" class="flex flex-col items-center text-yellow-400">
-        <i class="fas fa-wallet text-xl"></i>
-        <span class="text-xs">উত্তোলন</span>
-    </a>
-    <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-user text-xl"></i>
-        <span class="text-xs">প্রোফাইল</span>
-    </a>
-</nav>
+        <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400"><i class="fas fa-home text-xl"></i><span class="text-xs">হোম</span></a>
+        <a href="task-video.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400"><i class="fas fa-play-circle text-xl"></i><span class="text-xs">টাস্ক</span></a>
+        <a href="packages.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400"><i class="fas fa-box text-xl"></i><span class="text-xs">প্যাকেজ</span></a>
+        <a href="withdraw.html" class="flex flex-col items-center text-yellow-400"><i class="fas fa-wallet text-xl"></i><span class="text-xs">উত্তোলন</span></a>
+        <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400"><i class="fas fa-user text-xl"></i><span class="text-xs">প্রোফাইল</span></a>
+    </nav>
+
     <script>
         const token = localStorage.getItem('authToken');
         if (!token) window.location.href = 'login.html';
-        
-        async function requestWithdraw() {
-            const amount = document.getElementById('amount').value;
+
+        let userBalance = 0;
+        let userLevel = 1;
+        let minWithdraw = 0;
+        let withdrawalAccount = null;
+
+        async function loadUserData() {
+            const res = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('userLevel').innerText = data.level;
+                document.getElementById('userBalance').innerText = data.balance;
+                userBalance = data.balance;
+                userLevel = data.level;
+                
+                // লেভেল অনুযায়ী ন্যূনতম উত্তোলন বের করুন
+                const pkgRes = await fetch('/api/packages');
+                const packages = await pkgRes.json();
+                const userPackage = packages.find(p => p.level === userLevel);
+                minWithdraw = userPackage ? userPackage.min_withdraw : 350;
+            }
+            await loadWithdrawalAccount();
+        }
+
+        async function loadWithdrawalAccount() {
+            const res = await fetch('/api/my-withdrawal-account', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const account = await res.json();
+                withdrawalAccount = account;
+                if (account && account.is_verified) {
+                    document.getElementById('accountSetupSection').classList.add('hidden');
+                    document.getElementById('withdrawSection').classList.remove('hidden');
+                    document.getElementById('displayAccountName').innerText = account.account_name;
+                    document.getElementById('displayAccountNumber').innerText = `${account.account_type.toUpperCase()}: ${account.account_number}`;
+                } else if (account && !account.is_verified) {
+                    document.getElementById('accountSetupSection').classList.add('hidden');
+                    document.getElementById('withdrawSection').classList.add('hidden');
+                    showMessage('আপনার উত্তোলন একাউন্ট যাচাইকরণ চলছে। অ্যাডমিন অ্যাপ্রুভ করার পর উত্তোলন করতে পারবেন।', 'info');
+                } else {
+                    document.getElementById('accountSetupSection').classList.remove('hidden');
+                    document.getElementById('withdrawSection').classList.add('hidden');
+                }
+            }
+        }
+
+        async function createWithdrawalAccount() {
+            const accountName = document.getElementById('accName').value;
+            const accountNumber = document.getElementById('accNumber').value;
+            const accountType = document.getElementById('accType').value;
+            const withdrawPassword = document.getElementById('withdrawPass').value;
+
+            if (!accountName || !accountNumber || !withdrawPassword) {
+                showMessage('সব ঘর পূরণ করুন!', 'error');
+                return;
+            }
+
+            const res = await fetch('/api/create-withdrawal-account', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ accountName, accountNumber, accountType, withdrawPassword })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                showSuccessModal(data.message);
+                loadWithdrawalAccount();
+            } else {
+                showMessage(data.error, 'error');
+            }
+        }
+
+        document.getElementById('withdrawAmount').addEventListener('input', function() {
+            const amount = parseFloat(this.value);
+            if (!isNaN(amount) && amount > 0) {
+                const fee = amount * 0.10;
+                const netAmount = amount - fee;
+                document.getElementById('netAmountInfo').innerHTML = `আপনি পাবেন: ${netAmount.toFixed(2)} টাকা (ফি বাদে)`;
+            } else {
+                document.getElementById('netAmountInfo').innerHTML = `আপনি পাবেন: ০ টাকা`;
+            }
+        });
+
+        async function submitWithdraw() {
+            const amount = parseFloat(document.getElementById('withdrawAmount').value);
+            const withdrawPassword = document.getElementById('withdrawPassword').value;
+
+            if (!amount || amount < minWithdraw) {
+                showMessage(`ন্যূনতম উত্তোলন ${minWithdraw} টাকা`, 'error');
+                return;
+            }
+
+            if (!withdrawPassword) {
+                showMessage('উত্তোলন পাসওয়ার্ড দিন!', 'error');
+                return;
+            }
+
             const res = await fetch('/api/request-withdraw', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ amount: parseFloat(amount) })
+                body: JSON.stringify({ amount, withdrawPassword })
             });
+
             const data = await res.json();
-            if (res.ok) alert('আবেদন জমা হয়েছে। ১-২৪ ঘন্টার মধ্যে প্রক্রিয়া করা হবে।');
-            else document.getElementById('msg').innerText = data.error;
+            if (res.ok) {
+                showSuccessModal(data.message);
+                document.getElementById('withdrawAmount').value = '';
+                document.getElementById('withdrawPassword').value = '';
+                loadUserData();
+            } else {
+                showMessage(data.error, 'error');
+            }
         }
+
+        function showMessage(msg, type) {
+            const msgDiv = document.getElementById('messageArea');
+            msgDiv.className = `rounded-xl p-4 mb-4 ${type === 'error' ? 'bg-red-500/20 border border-red-500 text-red-400' : 'bg-blue-500/20 border border-blue-500 text-blue-400'}`;
+            msgDiv.innerHTML = `<i class="fas ${type === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle'} mr-2"></i> ${msg}`;
+            msgDiv.classList.remove('hidden');
+            setTimeout(() => msgDiv.classList.add('hidden'), 5000);
+        }
+
+        function showSuccessModal(message) {
+            document.getElementById('successMessage').innerText = message;
+            document.getElementById('successModal').style.display = 'flex';
+            document.getElementById('successModal').classList.remove('hidden');
+            setTimeout(() => closeSuccessModal(), 3000);
+        }
+
+        function closeSuccessModal() {
+            document.getElementById('successModal').style.display = 'none';
+            document.getElementById('successModal').classList.add('hidden');
+        }
+
+        loadUserData();
     </script>
 </body>
 </html>

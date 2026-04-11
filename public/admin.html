@@ -63,6 +63,11 @@
                 <span>ব্যালেন্স রিকোয়েস্ট</span>
                 <span id="balanceReqCount" class="ml-auto bg-purple-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
+            <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showWithdrawalAccounts()">
+                <i class="fas fa-user-check w-5"></i>
+                <span>উত্তোলন একাউন্ট</span>
+                <span id="withdrawAccCount" class="ml-auto bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+            </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showSettings()">
                 <i class="fas fa-cog w-5"></i>
                 <span>সেটিংস</span>
@@ -89,28 +94,16 @@
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">ড্যাশবোর্ড</h1>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-blue-100 text-sm">মোট ইউজার</p><p class="text-3xl font-bold" id="totalUsers">0</p></div>
-                        <i class="fas fa-users text-3xl text-blue-200"></i>
-                    </div>
+                    <div class="flex justify-between items-start"><div><p class="text-blue-100 text-sm">মোট ইউজার</p><p class="text-3xl font-bold" id="totalUsers">0</p></div><i class="fas fa-users text-3xl text-blue-200"></i></div>
                 </div>
                 <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-green-100 text-sm">মোট উত্তোলন</p><p class="text-3xl font-bold" id="totalWithdrawals">0</p></div>
-                        <i class="fas fa-hand-holding-usd text-3xl text-green-200"></i>
-                    </div>
+                    <div class="flex justify-between items-start"><div><p class="text-green-100 text-sm">মোট উত্তোলন</p><p class="text-3xl font-bold" id="totalWithdrawals">0</p></div><i class="fas fa-hand-holding-usd text-3xl text-green-200"></i></div>
                 </div>
                 <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-purple-100 text-sm">মোট উপার্জন</p><p class="text-3xl font-bold" id="totalEarnings">0</p></div>
-                        <i class="fas fa-chart-line text-3xl text-purple-200"></i>
-                    </div>
+                    <div class="flex justify-between items-start"><div><p class="text-purple-100 text-sm">মোট উপার্জন</p><p class="text-3xl font-bold" id="totalEarnings">0</p></div><i class="fas fa-chart-line text-3xl text-purple-200"></i></div>
                 </div>
                 <div class="stat-card bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start">
-                        <div><p class="text-yellow-100 text-sm">একটিভ ইউজার</p><p class="text-3xl font-bold" id="activeUsers">0</p></div>
-                        <i class="fas fa-user-check text-3xl text-yellow-200"></i>
-                    </div>
+                    <div class="flex justify-between items-start"><div><p class="text-yellow-100 text-sm">একটিভ ইউজার</p><p class="text-3xl font-bold" id="activeUsers">0</p></div><i class="fas fa-user-check text-3xl text-yellow-200"></i></div>
                 </div>
             </div>
             <div class="bg-white/10 backdrop-blur rounded-xl p-4 mb-6 border border-white/20">
@@ -130,17 +123,9 @@
 
         <!-- Users Section -->
         <div id="usersSection" class="section hidden">
-            <div class="flex justify-between items-center mb-6">
-                <h1 class="text-2xl md:text-3xl font-bold text-white">সকল ইউজার</h1>
-                <div class="relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="userSearch" placeholder="ইউজার খুঁজুন..." class="pl-10 pr-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"></div>
-            </div>
+            <div class="flex justify-between items-center mb-6"><h1 class="text-2xl md:text-3xl font-bold text-white">সকল ইউজার</h1><div class="relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="userSearch" placeholder="ইউজার খুঁজুন..." class="pl-10 pr-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"></div></div>
             <div class="bg-white/10 backdrop-blur rounded-xl overflow-hidden border border-white/20">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-white text-sm">
-                        <thead class="bg-white/20"><tr><th class="px-4 py-3 text-left">আইডি</th><th class="px-4 py-3 text-left">ইউজারনেম</th><th class="px-4 py-3 text-left">মোবাইল</th><th class="px-4 py-3 text-left">লেভেল</th><th class="px-4 py-3 text-left">ব্যালেন্স</th><th class="px-4 py-3 text-left">স্ট্যাটাস</th><th class="px-4 py-3 text-left">অ্যাকশন</th></tr></thead>
-                        <tbody id="usersList"></tbody>
-                    </table>
-                </div>
+                <div class="overflow-x-auto"><table class="w-full text-white text-sm"><thead class="bg-white/20"><tr><th class="px-4 py-3 text-left">আইডি</th><th class="px-4 py-3 text-left">ইউজারনেম</th><th class="px-4 py-3 text-left">মোবাইল</th><th class="px-4 py-3 text-left">লেভেল</th><th class="px-4 py-3 text-left">ব্যালেন্স</th><th class="px-4 py-3 text-left">স্ট্যাটাস</th><th class="px-4 py-3 text-left">অ্যাকশন</th></tr></thead><tbody id="usersList"></tbody></table></div>
             </div>
         </div>
 
@@ -160,6 +145,12 @@
         <div id="balanceRequestsSection" class="section hidden">
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">ব্যালেন্স অ্যাড রিকোয়েস্ট</h1>
             <div id="balanceRequestsList" class="space-y-3"></div>
+        </div>
+
+        <!-- Withdrawal Accounts Section -->
+        <div id="withdrawalAccountsSection" class="section hidden">
+            <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">উত্তোলন একাউন্ট ভেরিফিকেশন</h1>
+            <div id="withdrawalAccountsList" class="space-y-3"></div>
         </div>
 
         <!-- Settings Section -->
@@ -197,6 +188,7 @@
         function showPackages() { showSection('packagesSection'); loadPackageRequests(); }
         function showWithdrawals() { showSection('withdrawalsSection'); loadWithdrawals(); }
         function showBalanceRequests() { showSection('balanceRequestsSection'); loadBalanceRequests(); }
+        function showWithdrawalAccounts() { showSection('withdrawalAccountsSection'); loadWithdrawalAccounts(); }
         function showSettings() { showSection('settingsSection'); loadSettings(); }
         function showSection(sectionId) { document.querySelectorAll('.section').forEach(s => s.classList.add('hidden')); document.getElementById(sectionId).classList.remove('hidden'); }
 
@@ -235,81 +227,44 @@
             const res = await fetch('/admin/pending-withdrawals', { headers: { 'Authorization': `Bearer ${token}` } });
             const withdrawals = await res.json();
             document.getElementById('withdrawCount').innerText = withdrawals.length;
-            document.getElementById('withdrawalsList').innerHTML = withdrawals.length === 0 ? '<div class="text-center text-gray-400 py-8">কোনো পেন্ডিং উত্তোলন নেই</div>' : withdrawals.map(w => `<div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20 flex flex-wrap justify-between items-center gap-3"><div><p class="text-white font-bold">${w.username}</p><p class="text-gray-400 text-sm">টাকা: ${w.amount} | মোবাইল: ${w.mobile}</p></div><button onclick="processWithdraw(${w.id})" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">প্রসেস করুন</button></div>`).join('');
+            document.getElementById('withdrawalsList').innerHTML = withdrawals.length === 0 ? '<div class="text-center text-gray-400 py-8">কোনো পেন্ডিং উত্তোলন নেই</div>' : withdrawals.map(w => `<div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20"><div><p class="text-white font-bold">${w.username}</p><p class="text-gray-400 text-sm">টাকা: ${w.amount} (প্রাপ্ত: ${w.net_amount} + ফি: ${w.fee})</p><p class="text-gray-400 text-sm">একাউন্ট: ${w.account_name} (${w.account_number})</p></div><button onclick="processWithdraw(${w.id})" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">প্রসেস করুন</button></div>`).join('');
         }
 
         async function processWithdraw(id) { const res = await fetch('/admin/process-withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ withdrawalId: id }) }); if (res.ok) { alert('উত্তোলন প্রসেস করা হয়েছে!'); loadWithdrawals(); loadDashboard(); } else alert('Error!'); }
 
         async function toggleUserStatus(id, currentStatus) { const newStatus = currentStatus === 'active' ? 'blocked' : 'active'; const res = await fetch('/admin/toggle-user-status', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ userId: id, status: newStatus }) }); if (res.ok) loadUsers(); }
 
-        function openBalanceModal(id, username, balance) { currentUserId = id; document.getElementById('modalUserName').innerText = username; document.getElementById('modalUserBalance').innerText = balance; document.getElementById('modalAmount').value = ''; document.getElementById('balanceModal').classList.remove('hidden'); document.getElementById('balanceModal').style.display = 'flex'; }
+        function openBalanceModal(id, username, balance) { currentUserId = id; document.getElementById('modalUserName').innerText = username; document.getElementById('modalUserBalance').innerText = balance; document.getElementById('modalAmount').value = ''; document.getElementById('balanceModal').style.display = 'flex'; document.getElementById('balanceModal').classList.remove('hidden'); }
         function closeModal() { document.getElementById('balanceModal').style.display = 'none'; }
         async function addBalance() { const amount = parseFloat(document.getElementById('modalAmount').value); if (!amount || amount <= 0) { alert('সঠিক টাকার পরিমাণ দিন'); return; } const res = await fetch('/admin/add-balance', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ userId: currentUserId, amount: amount }) }); if (res.ok) { alert('ব্যালেন্স যোগ করা হয়েছে!'); closeModal(); loadUsers(); loadDashboard(); } else alert('Error!'); }
 
-        // ব্যালেন্স রিকোয়েস্ট লোড
         async function loadBalanceRequests() {
-            try {
-                const res = await fetch('/admin/pending-balance-requests', { headers: { 'Authorization': `Bearer ${token}` } });
-                const requests = await res.json();
-                document.getElementById('balanceReqCount').innerText = requests.length;
-                if (requests.length === 0) {
-                    document.getElementById('balanceRequestsList').innerHTML = '<div class="text-center text-gray-400 py-8">কোনো ব্যালেন্স রিকোয়েস্ট নেই</div>';
-                } else {
-                    document.getElementById('balanceRequestsList').innerHTML = requests.map(r => `
-                        <div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
-                            <div class="flex flex-wrap justify-between items-start gap-3">
-                                <div>
-                                    <p class="text-white font-bold">${r.username}</p>
-                                    <p class="text-gray-400 text-sm">টাকা: ${r.amount} | মোবাইল: ${r.mobile || 'N/A'}</p>
-                                    <p class="text-gray-400 text-sm">TxID: ${r.transaction_id} | ${r.payment_method || 'মোবাইল ব্যাংকিং'}</p>
-                                    <p class="text-gray-500 text-xs">আবেদনের সময়: ${new Date(r.requested_at).toLocaleString()}</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button onclick="approveBalanceRequest(${r.id}, ${r.amount})" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">অ্যাপ্রুভ</button>
-                                    <button onclick="rejectBalanceRequest(${r.id})" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">রিজেক্ট</button>
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
-                }
-            } catch(e) { console.error('Error loading balance requests:', e); }
+            const res = await fetch('/admin/pending-balance-requests', { headers: { 'Authorization': `Bearer ${token}` } });
+            const requests = await res.json();
+            document.getElementById('balanceReqCount').innerText = requests.length;
+            if (requests.length === 0) { document.getElementById('balanceRequestsList').innerHTML = '<div class="text-center text-gray-400 py-8">কোনো ব্যালেন্স রিকোয়েস্ট নেই</div>'; }
+            else { document.getElementById('balanceRequestsList').innerHTML = requests.map(r => `<div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20"><div><p class="text-white font-bold">${r.username}</p><p class="text-gray-400 text-sm">টাকা: ${r.amount} | TxID: ${r.transaction_id}</p><div class="flex gap-2 mt-2"><button onclick="approveBalanceRequest(${r.id}, ${r.amount})" class="bg-green-600 text-white px-4 py-2 rounded-lg">অ্যাপ্রুভ</button><button onclick="rejectBalanceRequest(${r.id})" class="bg-red-600 text-white px-4 py-2 rounded-lg">রিজেক্ট</button></div></div></div>`).join(''); }
         }
 
-        async function approveBalanceRequest(requestId, amount) {
-            const res = await fetch('/admin/approve-balance-request', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ requestId: requestId })
-            });
-            if (res.ok) {
-                alert(`${amount} টাকা ইউজারের একাউন্টে যোগ করা হয়েছে!`);
-                loadBalanceRequests();
-                loadDashboard();
-                loadUsers();
-            } else { alert('Error!'); }
+        async function approveBalanceRequest(requestId, amount) { const res = await fetch('/admin/approve-balance-request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ requestId }) }); if (res.ok) { alert(`${amount} টাকা ব্যালেন্স যোগ করা হয়েছে!`); loadBalanceRequests(); loadDashboard(); loadUsers(); } else alert('Error!'); }
+        async function rejectBalanceRequest(requestId) { const res = await fetch('/admin/reject-balance-request', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ requestId }) }); if (res.ok) { alert('রিকোয়েস্ট রিজেক্ট করা হয়েছে!'); loadBalanceRequests(); } else alert('Error!'); }
+
+        async function loadWithdrawalAccounts() {
+            const res = await fetch('/admin/pending-withdrawal-accounts', { headers: { 'Authorization': `Bearer ${token}` } });
+            const accounts = await res.json();
+            document.getElementById('withdrawAccCount').innerText = accounts.length;
+            if (accounts.length === 0) { document.getElementById('withdrawalAccountsList').innerHTML = '<div class="text-center text-gray-400 py-8">কোনো পেন্ডিং একাউন্ট নেই</div>'; }
+            else { document.getElementById('withdrawalAccountsList').innerHTML = accounts.map(acc => `<div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20"><div><p class="text-white font-bold">${acc.username}</p><p class="text-gray-300 text-sm">নাম: ${acc.account_name}</p><p class="text-gray-300 text-sm">একাউন্ট: ${acc.account_number} (${acc.account_type})</p><p class="text-gray-300 text-sm">মোবাইল: ${acc.mobile}</p><button onclick="verifyWithdrawalAccount(${acc.id})" class="mt-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">ভেরিফাই করুন</button></div></div>`).join(''); }
         }
 
-        async function rejectBalanceRequest(requestId) {
-            const res = await fetch('/admin/reject-balance-request', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ requestId: requestId })
-            });
-            if (res.ok) { alert('রিকোয়েস্ট রিজেক্ট করা হয়েছে!'); loadBalanceRequests(); }
-            else { alert('Error!'); }
-        }
+        async function verifyWithdrawalAccount(accountId) { const res = await fetch('/admin/verify-withdrawal-account', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ accountId }) }); if (res.ok) { alert('একাউন্ট ভেরিফাই করা হয়েছে!'); loadWithdrawalAccounts(); } else alert('Error!'); }
 
-        async function loadSettings() {
-            const res = await fetch('/api/packages');
-            const packages = await res.json();
-            document.getElementById('packagesSettings').innerHTML = packages.map(p => `<div class="flex flex-wrap gap-3 items-center justify-between bg-white/5 rounded-lg p-3"><span class="text-white font-medium w-24">লেভেল ${p.level}</span><input type="number" id="price_${p.level}" value="${p.price}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="মূল্য"><input type="number" id="taskRate_${p.level}" value="${p.task_rate}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="টাস্ক রেট"><input type="number" id="minWithdraw_${p.level}" value="${p.min_withdraw}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="ন্যূনতম উত্তোলন"></div>`).join('');
-        }
-
+        async function loadSettings() { const res = await fetch('/api/packages'); const packages = await res.json(); document.getElementById('packagesSettings').innerHTML = packages.map(p => `<div class="flex flex-wrap gap-3 items-center justify-between bg-white/5 rounded-lg p-3"><span class="text-white font-medium w-24">লেভেল ${p.level}</span><input type="number" id="price_${p.level}" value="${p.price}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="মূল্য"><input type="number" id="taskRate_${p.level}" value="${p.task_rate}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="টাস্ক রেট"><input type="number" id="minWithdraw_${p.level}" value="${p.min_withdraw}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="ন্যূনতম উত্তোলন"></div>`).join(''); }
         async function updatePackagePrices() { alert('প্যাকেজ আপডেট ফাংশন তৈরি করা হবে'); }
 
         document.getElementById('menuBtn')?.addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('translate-x-0'); });
         showDashboard();
-        setInterval(() => { loadPackageRequests(); loadWithdrawals(); loadBalanceRequests(); }, 30000);
+        setInterval(() => { loadPackageRequests(); loadWithdrawals(); loadBalanceRequests(); loadWithdrawalAccounts(); }, 30000);
     </script>
 </body>
 </html>
