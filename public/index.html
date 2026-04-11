@@ -2,41 +2,115 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>টাস্ক কিং</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>টাস্ক কিং - আয় করুন অনলাইনে</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 pb-16">
-    <header class="bg-blue-600 text-white p-4 text-center text-xl font-bold">
-        টাস্ক কিং
-    </header>
+<body class="bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 min-h-screen">
+    <!-- Hero Section -->
+    <div class="container mx-auto px-4 py-12 md:py-20">
+        <div class="text-center text-white">
+            <!-- Logo -->
+            <div class="float-animation inline-block">
+                <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6 shadow-2xl">
+                    <i class="fas fa-tasks text-5xl text-white"></i>
+                </div>
+            </div>
+            
+            <!-- Title -->
+            <h1 class="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent">
+                টাস্ক কিং
+            </h1>
+            <p class="text-xl md:text-2xl text-white/90 mb-6">টাস্ক করুন, আয় করুন, উত্তোলন করুন</p>
+            <p class="text-lg text-white/70 mb-12 max-w-2xl mx-auto">
+                সহজ কাজ সম্পন্ন করে প্রতিদিন আয় করুন। লেভেল আপগ্রেড করে আরও বেশি উপার্জনের সুযোগ নিন।
+            </p>
+            
+            <!-- Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+                <a href="register.html" class="bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 px-8 rounded-full hover:from-yellow-500 hover:to-orange-600 transition duration-300 transform hover:scale-105 shadow-lg text-lg">
+                    <i class="fas fa-user-plus mr-2"></i> ফ্রি রেজিস্টার করুন
+                </a>
+                <a href="login.html" class="bg-white/20 backdrop-blur border-2 border-white text-white font-bold py-3 px-8 rounded-full hover:bg-white/30 transition duration-300 text-lg">
+                    <i class="fas fa-sign-in-alt mr-2"></i> লগইন করুন
+                </a>
+            </div>
+        </div>
 
-    <div class="bg-white m-4 p-3 rounded shadow">
-        <h2 class="font-bold text-lg">📢 লাইভ উত্তোলন</h2>
-        <div id="liveList" class="text-sm text-gray-600 space-y-1 mt-2"></div>
-    </div>
+        <!-- Features Section -->
+        <div class="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mt-12">
+            <div class="bg-white/10 backdrop-blur rounded-2xl p-6 text-center border border-white/20">
+                <div class="bg-yellow-400 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-tasks text-2xl text-gray-800"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">সহজ টাস্ক</h3>
+                <p class="text-white/70">প্রতিদিন নতুন টাস্ক সম্পন্ন করুন এবং পয়েন্ট অর্জন করুন</p>
+            </div>
+            
+            <div class="bg-white/10 backdrop-blur rounded-2xl p-6 text-center border border-white/20">
+                <div class="bg-yellow-400 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-money-bill-wave text-2xl text-gray-800"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">তাৎক্ষণিক উত্তোলন</h3>
+                <p class="text-white/70">আপনার আয় যেকোনো সময় উত্তোলন করুন বিকাশ, নগদ বা রকেটে</p>
+            </div>
+            
+            <div class="bg-white/10 backdrop-blur rounded-2xl p-6 text-center border border-white/20">
+                <div class="bg-yellow-400 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-users text-2xl text-gray-800"></i>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">রেফারেল বোনাস</h3>
+                <p class="text-white/70">বন্ধুদের আনুন এবং তাদের আয়ের উপর কমিশন উপার্জন করুন</p>
+            </div>
+        </div>
 
-    <nav class="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2 shadow-lg">
-        <button onclick="location.href='index.html'" class="flex flex-col items-center text-blue-600">🏠 <span class="text-xs">হোম</span></button>
-        <button onclick="location.href='packages.html'" class="flex flex-col items-center text-gray-600">📦 <span class="text-xs">প্যাকেজ</span></button>
-        <button onclick="location.href='withdraw.html'" class="flex flex-col items-center text-gray-600">💰 <span class="text-xs">উত্তোলন</span></button>
-        <button onclick="location.href='profile.html'" class="flex flex-col items-center text-gray-600">👤 <span class="text-xs">প্রোফাইল</span></button>
-        <button onclick="location.href='support.html'" class="flex flex-col items-center text-gray-600">🆘 <span class="text-xs">সাপোর্ট</span></button>
-    </nav>
-
-    <div class="p-4 text-center">
-        <p class="text-gray-500">স্বাগতম! উপার্জন শুরু করতে <a href="login.html" class="text-blue-600">লগইন</a> করুন।</p>
+        <!-- Live Withdrawals Section -->
+        <div class="max-w-2xl mx-auto mt-12 bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
+            <h2 class="text-2xl font-bold text-center text-white mb-4">
+                <i class="fas fa-bell mr-2 text-yellow-400"></i> লাইভ উত্তোলন
+            </h2>
+            <div id="liveList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-white/60">লোড হচ্ছে...</div>
+            </div>
+        </div>
     </div>
 
     <script>
         async function loadLive() {
-            const res = await fetch('/api/live-withdrawals');
-            const data = await res.json();
-            const div = document.getElementById('liveList');
-            div.innerHTML = data.map(w => `<div>${w.username} - ${w.amount} টাকা উত্তোলন করেছেন (${new Date(w.created_at).toLocaleTimeString()})</div>`).join('');
+            try {
+                const res = await fetch('/api/live-withdrawals');
+                const data = await res.json();
+                const div = document.getElementById('liveList');
+                if (data.length === 0) {
+                    div.innerHTML = '<div class="text-center text-white/60">কোনো উত্তোলন এখনও হয়নি</div>';
+                } else {
+                    div.innerHTML = data.map(w => `
+                        <div class="bg-white/5 rounded-lg p-3 flex justify-between items-center border border-white/10">
+                            <div class="flex items-center gap-2">
+                                <i class="fas fa-user-circle text-yellow-400"></i>
+                                <span class="text-white">${w.username}</span>
+                            </div>
+                            <div class="text-yellow-400 font-bold">${w.amount} টাকা</div>
+                            <div class="text-white/50 text-sm">${new Date(w.created_at).toLocaleString()}</div>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) {
+                console.log('Error loading live withdrawals');
+            }
         }
         loadLive();
-        setInterval(loadLive, 10000);
+        setInterval(loadLive, 30000);
     </script>
 </body>
 </html>
