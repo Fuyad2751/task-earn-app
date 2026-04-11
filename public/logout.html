@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>লগআউট - টাস্ক কিং</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-600 via-indigo-700 to-purple-800 min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-md text-center border border-white/20">
+        <!-- Logo -->
+        <div class="mb-6">
+            <div class="bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full w-20 h-20 flex items-center justify-center mx-auto shadow-lg">
+                <i class="fas fa-tasks text-4xl text-white"></i>
+            </div>
+        </div>
+        
+        <!-- Spinner -->
+        <div class="flex justify-center mb-6">
+            <div class="spinner">
+                <i class="fas fa-circle-notch text-4xl text-yellow-400"></i>
+            </div>
+        </div>
+        
+        <!-- Message -->
+        <h2 class="text-2xl font-bold text-white mb-2">লগআউট হচ্ছে...</h2>
+        <p class="text-white/70 mb-6">আপনাকে হোমপেজে নিয়ে যাওয়া হচ্ছে</p>
+        
+        <!-- Manual Link -->
+        <p class="text-white/50 text-sm">
+            যদি自動ভাবে না যায়, <a href="index.html" class="text-yellow-400 hover:underline">এখানে ক্লিক করুন</a>
+        </p>
+    </div>
+
+    <script>
+        // লোকাল স্টোরেজ থেকে টোকেন রিমুভ করুন
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        
+        // 2 সেকেন্ড পর হোমপেজে রিডাইরেক্ট
+        setTimeout(function() {
+            window.location.href = 'index.html';
+        }, 2000);
+    </script>
+</body>
+</html>
