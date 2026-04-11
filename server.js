@@ -266,3 +266,26 @@ app.post('/api/complete-video-task', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// রেফারেল তালিকা API
+app.get('/api/my-referrals', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    const referrals = await pool.query(`
+      SELECT u.username, u.level, u.created_at as joined, 
+             CASE 
+               WHEN u.referrer_id = $1 THEN 1
+               WHEN r2.referrer_id = $1 THEN 2
+               WHEN r3.referrer_id = $1 THEN 3
+             END as generation
+      FROM users u
+      LEFT JOIN users r2 ON u.referrer_id = r2.id
+      LEFT JOIN users r3 ON r2.referrer_id = r3.id
+      WHERE u.referrer_id = $1 OR r2.referrer_id = $1 OR r3.referrer_id = $1
+    `, [userId]);
+    
+    res.json(referrals.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});

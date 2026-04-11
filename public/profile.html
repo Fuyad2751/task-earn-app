@@ -2,57 +2,396 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>প্রোফাইল</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>প্রোফাইল - টাস্ক কিং</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+        .referral-item {
+            transition: all 0.2s ease;
+        }
+        .referral-item:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+    </style>
 </head>
-<body class="bg-gray-100 pb-16">
-    <header class="bg-blue-600 text-white p-4 text-center">আমার প্রোফাইল</header>
-    <div id="profile" class="p-4 space-y-2 bg-white m-4 rounded shadow"></div>
-    <button onclick="logout()" class="bg-red-500 text-white w-[90%] mx-auto block py-2 rounded">লগআউট</button>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-user-circle text-2xl"></i>
+                <span class="text-xl font-bold">আমার প্রোফাইল</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm bg-white/20 px-3 py-1 rounded-full">
+                    <i class="fas fa-chart-simple mr-1"></i> লেভেল <span id="userLevel">১</span>
+                </span>
+                <a href="logout.html" class="text-white/80 hover:text-white">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 max-w-4xl">
+        <!-- Profile Header Card -->
+        <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-6 mb-6 text-white shadow-xl">
+            <div class="flex flex-col md:flex-row items-center gap-4">
+                <div class="bg-white/20 rounded-full w-24 h-24 flex items-center justify-center">
+                    <i class="fas fa-user-circle text-5xl text-white"></i>
+                </div>
+                <div class="flex-1 text-center md:text-left">
+                    <h1 class="text-2xl font-bold" id="profileUsername">লোড হচ্ছে...</h1>
+                    <p class="text-white/80">মেম্বার সিন্স: <span id="memberSince">...</span></p>
+                    <div class="flex flex-wrap gap-2 mt-2 justify-center md:justify-start">
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm">
+                            <i class="fas fa-id-card mr-1"></i> আইডি: <span id="userId">...</span>
+                        </span>
+                        <span class="bg-white/20 px-3 py-1 rounded-full text-sm">
+                            <i class="fas fa-code-branch mr-1"></i> রেফারেল কোড: <span id="referralCode">...</span>
+                        </span>
+                    </div>
+                </div>
+                <div class="text-center md:text-right">
+                    <div class="bg-white/20 rounded-xl px-4 py-2">
+                        <p class="text-sm">আইডির অবস্থা</p>
+                        <p class="font-bold text-green-300" id="userStatus">active</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Balance Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <!-- Main Balance -->
+            <div class="stat-card bg-gradient-to-br from-green-500/20 to-emerald-600/20 rounded-xl p-4 border border-green-500/30 backdrop-blur">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">মূল ব্যালেন্স</p>
+                        <p class="text-2xl font-bold text-white"><span id="mainBalance">০</span> টাকা</p>
+                    </div>
+                    <div class="bg-green-500/30 rounded-full p-3">
+                        <i class="fas fa-wallet text-2xl text-green-400"></i>
+                    </div>
+                </div>
+                <p class="text-gray-400 text-xs mt-2">মোট উপার্জন - মোট উত্তোলন</p>
+            </div>
+
+            <!-- Today's Earnings -->
+            <div class="stat-card bg-gradient-to-br from-yellow-500/20 to-orange-600/20 rounded-xl p-4 border border-yellow-500/30 backdrop-blur">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">আজকের আয়</p>
+                        <p class="text-2xl font-bold text-white"><span id="todayEarning">০</span> টাকা</p>
+                    </div>
+                    <div class="bg-yellow-500/30 rounded-full p-3">
+                        <i class="fas fa-sun text-2xl text-yellow-400"></i>
+                    </div>
+                </div>
+                <p class="text-gray-400 text-xs mt-2" id="lastUpdateDate">আজকের তারিখে আপডেট</p>
+            </div>
+
+            <!-- Referral Commission -->
+            <div class="stat-card bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-xl p-4 border border-purple-500/30 backdrop-blur">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-300 text-sm">রেফারেল কমিশন</p>
+                        <p class="text-2xl font-bold text-white"><span id="referralCommission">০</span> টাকা</p>
+                    </div>
+                    <div class="bg-purple-500/30 rounded-full p-3">
+                        <i class="fas fa-users text-2xl text-purple-400"></i>
+                    </div>
+                </div>
+                <p class="text-gray-400 text-xs mt-2">বন্ধু আনুন, কমিশন উপার্জন করুন</p>
+            </div>
+        </div>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+            <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                <i class="fas fa-tasks text-yellow-400 text-xl mb-1"></i>
+                <p class="text-gray-400 text-xs">মোট টাস্ক</p>
+                <p class="text-white font-bold text-lg" id="totalTasks">০</p>
+            </div>
+            <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                <i class="fas fa-check-circle text-green-400 text-xl mb-1"></i>
+                <p class="text-gray-400 text-xs">কমপ্লিটেড</p>
+                <p class="text-white font-bold text-lg" id="completedTasks">০</p>
+            </div>
+            <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                <i class="fas fa-hand-holding-usd text-blue-400 text-xl mb-1"></i>
+                <p class="text-gray-400 text-xs">মোট উত্তোলন</p>
+                <p class="text-white font-bold text-lg" id="totalWithdrawn">০</p>
+            </div>
+            <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                <i class="fas fa-chart-line text-green-400 text-xl mb-1"></i>
+                <p class="text-gray-400 text-xs">মোট উপার্জন</p>
+                <p class="text-white font-bold text-lg" id="totalEarnings">০</p>
+            </div>
+        </div>
+
+        <!-- Referral Section -->
+        <div class="bg-white/10 backdrop-blur rounded-2xl p-5 mb-6 border border-white/20">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold text-white">
+                    <i class="fas fa-users text-yellow-400 mr-2"></i> আমার রেফারেল তালিকা
+                </h2>
+                <div class="bg-yellow-500/20 px-3 py-1 rounded-full">
+                    <span class="text-yellow-400 font-semibold" id="referralCount">০</span>
+                    <span class="text-white/70"> জন</span>
+                </div>
+            </div>
+            
+            <!-- Referral Stats -->
+            <div class="grid grid-cols-3 gap-3 mb-4">
+                <div class="bg-white/5 rounded-lg p-2 text-center">
+                    <p class="text-xs text-gray-400">১ম জেনারেশন</p>
+                    <p class="text-white font-bold" id="gen1Count">০</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-2 text-center">
+                    <p class="text-xs text-gray-400">২য় জেনারেশন</p>
+                    <p class="text-white font-bold" id="gen2Count">০</p>
+                </div>
+                <div class="bg-white/5 rounded-lg p-2 text-center">
+                    <p class="text-xs text-gray-400">৩য় জেনারেশন</p>
+                    <p class="text-white font-bold" id="gen3Count">০</p>
+                </div>
+            </div>
+            
+            <!-- Referral List -->
+            <div id="referralList" class="space-y-2 max-h-64 overflow-y-auto">
+                <div class="text-center text-gray-400 py-4">লোড হচ্ছে...</div>
+            </div>
+            
+            <!-- Referral Code Box -->
+            <div class="mt-4 bg-white/5 rounded-xl p-3">
+                <p class="text-gray-300 text-sm mb-2">আপনার রেফারেল কোড</p>
+                <div class="flex items-center gap-2">
+                    <code id="refCodeDisplay" class="flex-1 bg-black/40 px-3 py-2 rounded-lg text-yellow-400 font-mono text-sm">...</code>
+                    <button onclick="copyReferralCode()" class="bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 px-4 py-2 rounded-lg transition">
+                        <i class="fas fa-copy"></i> কপি
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Info Section -->
+        <div class="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4">
+                <i class="fas fa-info-circle text-blue-400 mr-2"></i> একাউন্ট তথ্য
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="flex justify-between py-2 border-b border-white/10">
+                    <span class="text-gray-300">ইউজারনেম</span>
+                    <span class="text-white font-medium" id="infoUsername">-</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-white/10">
+                    <span class="text-gray-300">মোবাইল নম্বর</span>
+                    <span class="text-white font-medium" id="infoMobile">-</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-white/10">
+                    <span class="text-gray-300">বর্তমান লেভেল</span>
+                    <span class="text-yellow-400 font-bold" id="infoLevel">১</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-white/10">
+                    <span class="text-gray-300">অ্যাকাউন্ট তৈরি</span>
+                    <span class="text-white font-medium" id="infoCreated">-</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
-    <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-home text-xl"></i>
-        <span class="text-xs">হোম</span>
-    </a>
-    <a href="dashboard.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-tasks text-xl"></i>
-        <span class="text-xs">টাস্ক</span>
-    </a>
-    <a href="packages.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-box text-xl"></i>
-        <span class="text-xs">প্যাকেজ</span>
-    </a>
-    <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-wallet text-xl"></i>
-        <span class="text-xs">উত্তোলন</span>
-    </a>
-    <a href="profile.html" class="flex flex-col items-center text-yellow-400">
-        <i class="fas fa-user text-xl"></i>
-        <span class="text-xs">প্রোফাইল</span>
-    </a>
-</nav>
+        <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-home text-xl"></i>
+            <span class="text-xs">হোম</span>
+        </a>
+        <a href="task-video.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-play-circle text-xl"></i>
+            <span class="text-xs">টাস্ক</span>
+        </a>
+        <a href="packages.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-box text-xl"></i>
+            <span class="text-xs">প্যাকেজ</span>
+        </a>
+        <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-wallet text-xl"></i>
+            <span class="text-xs">উত্তোলন</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center text-yellow-400">
+            <i class="fas fa-user text-xl"></i>
+            <span class="text-xs">প্রোফাইল</span>
+        </a>
+    </nav>
+
     <script>
         const token = localStorage.getItem('authToken');
-        if (!token) window.location.href = 'login.html';
-        
-        async function loadProfile() {
-            const res = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${token}` } });
-            const p = await res.json();
-            document.getElementById('profile').innerHTML = `
-                <p><strong>ইউজার আইডি:</strong> ${p.username}</p>
-                <p><strong>মোবাইল:</strong> ${p.mobile}</p>
-                <p><strong>লেভেল:</strong> ${p.level}</p>
-                <p><strong>মোট উপার্জন:</strong> ${p.total_earnings} টাকা</p>
-                <p><strong>মোট উত্তোলন:</strong> ${p.total_withdrawn} টাকা</p>
-                <p><strong>বর্তমান ব্যালেন্স:</strong> ${p.balance} টাকা</p>
-                <p><strong>আইডির অবস্থা:</strong> ${p.status}</p>
-                <p><strong>আপনার রেফারেল কোড:</strong> ${p.referral_code}</p>
-            `;
+        if (!token) {
+            window.location.href = 'login.html';
         }
-        
-        function logout() { localStorage.removeItem('authToken'); window.location.href = 'login.html'; }
+
+        let userData = {};
+
+        // লোড প্রোফাইল ডাটা
+        async function loadProfile() {
+            try {
+                const res = await fetch('/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    userData = await res.json();
+                    updateProfileUI();
+                } else {
+                    localStorage.removeItem('authToken');
+                    window.location.href = 'login.html';
+                }
+            } catch (err) {
+                console.log('Error loading profile');
+            }
+        }
+
+        // UI আপডেট করুন
+        function updateProfileUI() {
+            // Basic Info
+            document.getElementById('profileUsername').innerText = userData.username || '-';
+            document.getElementById('userId').innerText = userData.id || '-';
+            document.getElementById('userLevel').innerText = userData.level || 1;
+            document.getElementById('infoLevel').innerText = userData.level || 1;
+            document.getElementById('userStatus').innerHTML = userData.status === 'active' ? 
+                '<i class="fas fa-circle text-green-400 text-xs mr-1"></i> সক্রিয়' : 
+                '<i class="fas fa-circle text-red-400 text-xs mr-1"></i> নিষ্ক্রিয়';
+            
+            // Balances
+            const mainBal = (userData.total_earnings || 0) - (userData.total_withdrawn || 0);
+            document.getElementById('mainBalance').innerText = mainBal;
+            document.getElementById('totalEarnings').innerText = userData.total_earnings || 0;
+            document.getElementById('totalWithdrawn').innerText = userData.total_withdrawn || 0;
+            
+            // Today's earnings (local storage based for demo)
+            const today = new Date().toISOString().slice(0,10);
+            const todayEarning = JSON.parse(localStorage.getItem(`dailyEarning_${userData.id}`) || '0');
+            document.getElementById('todayEarning').innerText = todayEarning;
+            document.getElementById('lastUpdateDate').innerHTML = `<i class="fas fa-calendar-day mr-1"></i> ${today}`;
+            
+            // Referral Commission
+            const referralComm = JSON.parse(localStorage.getItem(`referralComm_${userData.id}`) || '0');
+            document.getElementById('referralCommission').innerText = referralComm;
+            
+            // Other Stats
+            document.getElementById('infoUsername').innerText = userData.username || '-';
+            document.getElementById('infoMobile').innerText = userData.mobile || '-';
+            document.getElementById('infoCreated').innerText = userData.created_at ? new Date(userData.created_at).toLocaleDateString() : '-';
+            document.getElementById('referralCode').innerText = userData.referral_code || '-';
+            document.getElementById('refCodeDisplay').innerText = userData.referral_code || '-';
+            
+            // Task Stats
+            loadTaskStats();
+            
+            // Referral List
+            loadReferralList();
+        }
+
+        // টাস্ক স্ট্যাটস লোড করুন
+        async function loadTaskStats() {
+            try {
+                const res = await fetch('/api/my-tasks', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.ok) {
+                    const tasks = await res.json();
+                    const total = tasks.length;
+                    const completed = tasks.filter(t => t.completed).length;
+                    document.getElementById('totalTasks').innerText = total;
+                    document.getElementById('completedTasks').innerText = completed;
+                }
+            } catch(e) {
+                console.log('Error loading tasks');
+            }
+        }
+
+        // রেফারেল তালিকা লোড করুন
+        async function loadReferralList() {
+            try {
+                // এই API টি তৈরি করতে হবে ব্যাকএন্ড এ
+                // আপাতত ডেমো ডাটা দেখাচ্ছি
+                const demoReferrals = [
+                    { username: 'sakib123', level: 1, joined: '2024-01-15', generation: 1, earnings: 150 },
+                    { username: 'rakib77', level: 1, joined: '2024-01-20', generation: 1, earnings: 200 },
+                    { username: 'tamim9', level: 2, joined: '2024-02-01', generation: 2, earnings: 75 },
+                    { username: 'musfiq30', level: 1, joined: '2024-02-10', generation: 2, earnings: 100 },
+                    { username: 'mashrafe2', level: 3, joined: '2024-02-15', generation: 3, earnings: 50 }
+                ];
+                
+                const gen1 = demoReferrals.filter(r => r.generation === 1).length;
+                const gen2 = demoReferrals.filter(r => r.generation === 2).length;
+                const gen3 = demoReferrals.filter(r => r.generation === 3).length;
+                
+                document.getElementById('gen1Count').innerText = gen1;
+                document.getElementById('gen2Count').innerText = gen2;
+                document.getElementById('gen3Count').innerText = gen3;
+                document.getElementById('referralCount').innerText = demoReferrals.length;
+                
+                const container = document.getElementById('referralList');
+                if (demoReferrals.length === 0) {
+                    container.innerHTML = '<div class="text-center text-gray-400 py-4">কোনো রেফারেল এখনও নেই</div>';
+                } else {
+                    container.innerHTML = demoReferrals.map(ref => `
+                        <div class="referral-item bg-white/5 rounded-lg p-3 flex justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
+                                    <i class="fas fa-user text-white text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="text-white font-medium">${ref.username}</p>
+                                    <p class="text-gray-400 text-xs">জয়েন: ${ref.joined}</p>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs px-2 py-1 rounded-full ${ref.generation === 1 ? 'bg-green-500/20 text-green-400' : ref.generation === 2 ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}">
+                                    ${ref.generation}য় জেনারেশন
+                                </span>
+                                <p class="text-yellow-400 text-sm font-semibold mt-1">${ref.earnings} টাকা</p>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch(e) {
+                console.log('Error loading referrals');
+                document.getElementById('referralList').innerHTML = '<div class="text-center text-gray-400 py-4">রেফারেল তালিকা লোড করতে সমস্যা</div>';
+            }
+        }
+
+        // রেফারেল কোড কপি করুন
+        function copyReferralCode() {
+            const code = document.getElementById('refCodeDisplay').innerText;
+            navigator.clipboard.writeText(code);
+            alert(`রেফারেল কোড "${code}" কপি করা হয়েছে!`);
+        }
+
+        // আজকের আয় আপডেট (প্রতিদিন রাত ১২টায় রিসেট)
+        function checkAndResetDailyEarning() {
+            const today = new Date().toISOString().slice(0,10);
+            const lastDate = localStorage.getItem(`lastEarningDate_${userData.id}`);
+            if (lastDate !== today) {
+                localStorage.setItem(`dailyEarning_${userData.id}`, '0');
+                localStorage.setItem(`lastEarningDate_${userData.id}`, today);
+            }
+        }
+
+        // পৃষ্ঠা লোড
         loadProfile();
+        setInterval(() => {
+            loadProfile();
+        }, 60000);
     </script>
 </body>
 </html>
