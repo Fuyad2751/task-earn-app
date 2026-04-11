@@ -623,3 +623,51 @@ app.post('/api/request-package', authenticate, async (req, res) => {
   );
   res.json({ success: true, message: 'Request submitted. Admin will verify.' });
 });
+// ============ প্যাকেজ ক্রয় API (অটোমেটিক) ============
+app.post('/api/buy-package', authenticate, async (req, res) => {
+  const { level } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    const userLevel = user.rows[0].level;
+    
+    if (userLevel >= level) {
+      return res.status(400).json({ error: 'You already have this level or higher' });
+    }
+    
+    const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
+    const packagePrice = pkg.rows[0].price;
+    const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    
+    if (userBalance >= packagePrice) {
+      // ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
+      await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
+      
+      // ব্যালেন্স থেকে টাকা কাটুন
+      await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
+      
+      // রেফারেল কমিশন বিতরণ
+      await distributePackageCommission(userId, level, packagePrice);
+      
+      res.json({ 
+        success: true, 
+        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!`,
+        autoApproved: true
+      });
+    } else {
+      // ব্যালেন্স কম - অ্যাডমিন অ্যাপ্রুভ প্রয়োজন
+      const needAmount = packagePrice - userBalance;
+      res.json({ 
+        success: false, 
+        needBalance: true,
+        needAmount: needAmount,
+        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা যোগ করতে ব্যালেন্স রিকোয়েস্ট করুন।`
+      });
+    }
+    
+  } catch (err) {
+    console.error('Package buy error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
