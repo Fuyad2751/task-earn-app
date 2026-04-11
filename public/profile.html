@@ -282,10 +282,6 @@
             document.getElementById('todayEarning').innerText = todayEarning;
             document.getElementById('lastUpdateDate').innerHTML = `<i class="fas fa-calendar-day mr-1"></i> ${today}`;
             
-            // Referral Commission
-            const referralComm = JSON.parse(localStorage.getItem(`referralComm_${userData.id}`) || '0');
-            document.getElementById('referralCommission').innerText = referralComm;
-            
             // Other Stats
             document.getElementById('infoUsername').innerText = userData.username || '-';
             document.getElementById('infoMobile').innerText = userData.mobile || '-';
@@ -296,8 +292,9 @@
             // Task Stats
             loadTaskStats();
             
-            // Referral List
+            // Referral List & Commission
             loadReferralList();
+            loadReferralCommission();
         }
 
         // টাস্ক স্ট্যাটস লোড করুন
@@ -318,55 +315,84 @@
             }
         }
 
-        // রেফারেল তালিকা লোড করুন
+        // রেফারেল তালিকা লোড করুন (বাস্তব ডাটাবেস থেকে)
         async function loadReferralList() {
             try {
-                // এই API টি তৈরি করতে হবে ব্যাকএন্ড এ
-                // আপাতত ডেমো ডাটা দেখাচ্ছি
-                const demoReferrals = [
-                    { username: 'sakib123', level: 1, joined: '2024-01-15', generation: 1, earnings: 150 },
-                    { username: 'rakib77', level: 1, joined: '2024-01-20', generation: 1, earnings: 200 },
-                    { username: 'tamim9', level: 2, joined: '2024-02-01', generation: 2, earnings: 75 },
-                    { username: 'musfiq30', level: 1, joined: '2024-02-10', generation: 2, earnings: 100 },
-                    { username: 'mashrafe2', level: 3, joined: '2024-02-15', generation: 3, earnings: 50 }
-                ];
+                const res = await fetch('/api/my-referrals', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
                 
-                const gen1 = demoReferrals.filter(r => r.generation === 1).length;
-                const gen2 = demoReferrals.filter(r => r.generation === 2).length;
-                const gen3 = demoReferrals.filter(r => r.generation === 3).length;
-                
-                document.getElementById('gen1Count').innerText = gen1;
-                document.getElementById('gen2Count').innerText = gen2;
-                document.getElementById('gen3Count').innerText = gen3;
-                document.getElementById('referralCount').innerText = demoReferrals.length;
-                
-                const container = document.getElementById('referralList');
-                if (demoReferrals.length === 0) {
-                    container.innerHTML = '<div class="text-center text-gray-400 py-4">কোনো রেফারেল এখনও নেই</div>';
+                if (res.ok) {
+                    const data = await res.json();
+                    const referrals = data.referrals || [];
+                    const counts = data.counts || { gen1: 0, gen2: 0, gen3: 0, total: 0 };
+                    
+                    // জেনারেশন কাউন্ট আপডেট
+                    document.getElementById('gen1Count').innerText = counts.gen1;
+                    document.getElementById('gen2Count').innerText = counts.gen2;
+                    document.getElementById('gen3Count').innerText = counts.gen3;
+                    document.getElementById('referralCount').innerText = counts.total;
+                    
+                    const container = document.getElementById('referralList');
+                    if (referrals.length === 0) {
+                        container.innerHTML = '<div class="text-center text-gray-400 py-4">📭 কোনো রেফারেল এখনও নেই</div>';
+                    } else {
+                        container.innerHTML = referrals.map(ref => {
+                            let genClass = '';
+                            let genText = '';
+                            if (ref.generation === '1st') {
+                                genClass = 'bg-green-500/20 text-green-400';
+                                genText = '১ম জেনারেশন';
+                            } else if (ref.generation === '2nd') {
+                                genClass = 'bg-blue-500/20 text-blue-400';
+                                genText = '২য় জেনারেশন';
+                            } else {
+                                genClass = 'bg-purple-500/20 text-purple-400';
+                                genText = '৩য় জেনারেশন';
+                            }
+                            
+                            return `
+                                <div class="referral-item bg-white/5 rounded-lg p-3 flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
+                                            <i class="fas fa-user text-white text-sm"></i>
+                                        </div>
+                                        <div>
+                                            <p class="text-white font-medium">${ref.username}</p>
+                                            <p class="text-gray-400 text-xs">লেভেল ${ref.level} | জয়েন: ${new Date(ref.joined).toLocaleDateString()}</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <span class="text-xs px-2 py-1 rounded-full ${genClass}">${genText}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
                 } else {
-                    container.innerHTML = demoReferrals.map(ref => `
-                        <div class="referral-item bg-white/5 rounded-lg p-3 flex justify-between items-center">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center">
-                                    <i class="fas fa-user text-white text-sm"></i>
-                                </div>
-                                <div>
-                                    <p class="text-white font-medium">${ref.username}</p>
-                                    <p class="text-gray-400 text-xs">জয়েন: ${ref.joined}</p>
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <span class="text-xs px-2 py-1 rounded-full ${ref.generation === 1 ? 'bg-green-500/20 text-green-400' : ref.generation === 2 ? 'bg-blue-500/20 text-blue-400' : 'bg-purple-500/20 text-purple-400'}">
-                                    ${ref.generation}য় জেনারেশন
-                                </span>
-                                <p class="text-yellow-400 text-sm font-semibold mt-1">${ref.earnings} টাকা</p>
-                            </div>
-                        </div>
-                    `).join('');
+                    throw new Error('API response not ok');
                 }
             } catch(e) {
-                console.log('Error loading referrals');
-                document.getElementById('referralList').innerHTML = '<div class="text-center text-gray-400 py-4">রেফারেল তালিকা লোড করতে সমস্যা</div>';
+                console.error('Error loading referrals:', e);
+                document.getElementById('referralList').innerHTML = '<div class="text-center text-gray-400 py-4">⚠️ রেফারেল তালিকা লোড করতে সমস্যা</div>';
+            }
+        }
+
+        // রেফারেল কমিশন লোড করুন
+        async function loadReferralCommission() {
+            try {
+                const res = await fetch('/api/referral-commission', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.ok) {
+                    const data = await res.json();
+                    const totalCommission = data.total_commission || 0;
+                    document.getElementById('referralCommission').innerText = totalCommission;
+                }
+            } catch(e) {
+                console.error('Error loading referral commission:', e);
+                document.getElementById('referralCommission').innerText = '০';
             }
         }
 
@@ -379,15 +405,17 @@
 
         // আজকের আয় আপডেট (প্রতিদিন রাত ১২টায় রিসেট)
         function checkAndResetDailyEarning() {
+            if (!userData.id) return;
             const today = new Date().toISOString().slice(0,10);
             const lastDate = localStorage.getItem(`lastEarningDate_${userData.id}`);
             if (lastDate !== today) {
                 localStorage.setItem(`dailyEarning_${userData.id}`, '0');
                 localStorage.setItem(`lastEarningDate_${userData.id}`, today);
+                document.getElementById('todayEarning').innerText = '0';
             }
         }
 
-        // পৃষ্ঠা লোড
+        // পৃষ্ঠা লোড এবং প্রতি 60 সেকেন্ডে আপডেট
         loadProfile();
         setInterval(() => {
             loadProfile();

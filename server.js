@@ -289,3 +289,89 @@ app.get('/api/my-referrals', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// রেফারেল তালিকা API - বাস্তব ডাটাবেস থেকে
+app.get('/api/my-referrals', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    // ১ম জেনারেশন (সরাসরি রেফারেল)
+    const gen1 = await pool.query(`
+      SELECT id, username, level, created_at as joined, '1st' as generation
+      FROM users 
+      WHERE referrer_id = $1
+      ORDER BY created_at DESC
+    `, [userId]);
+    
+    // ২য় জেনারেশন (রেফারেলের রেফারেল)
+    const gen2 = await pool.query(`
+      SELECT u.id, u.username, u.level, u.created_at as joined, '2nd' as generation
+      FROM users u
+      INNER JOIN users r1 ON u.referrer_id = r1.id
+      WHERE r1.referrer_id = $1
+      ORDER BY u.created_at DESC
+    `, [userId]);
+    
+    // ৩য় জেনারেশন
+    const gen3 = await pool.query(`
+      SELECT u.id, u.username, u.level, u.created_at as joined, '3rd' as generation
+      FROM users u
+      INNER JOIN users r1 ON u.referrer_id = r1.id
+      INNER JOIN users r2 ON r1.referrer_id = r2.id
+      WHERE r2.referrer_id = $1
+      ORDER BY u.created_at DESC
+    `, [userId]);
+    
+    // সব জেনারেশন একত্রিত করুন
+    const allReferrals = [...gen1.rows, ...gen2.rows, ...gen3.rows];
+    
+    // জেনারেশন ভিত্তিক কাউন্ট
+    const counts = {
+      gen1: gen1.rows.length,
+      gen2: gen2.rows.length,
+      gen3: gen3.rows.length,
+      total: allReferrals.length
+    };
+    
+    res.json({
+      success: true,
+      referrals: allReferrals,
+      counts: counts
+    });
+    
+  } catch (err) {
+    console.error('Referral API error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// রেফারেল কমিশন ট্র্যাক করার API
+app.get('/api/referral-commission', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    // ইউজারের মোট রেফারেল কমিশন
+    const result = await pool.query(`
+      SELECT COALESCE(SUM(amount), 0) as total_commission
+      FROM referral_commissions
+      WHERE referrer_id = $1
+    `, [userId]);
+    
+    // জেনারেশন ভিত্তিক কমিশন
+    const byGeneration = await pool.query(`
+      SELECT level_gap, COALESCE(SUM(amount), 0) as total
+      FROM referral_commissions
+      WHERE referrer_id = $1
+      GROUP BY level_gap
+      ORDER BY level_gap
+    `, [userId]);
+    
+    res.json({
+      success: true,
+      total_commission: parseFloat(result.rows[0].total_commission),
+      by_generation: byGeneration.rows
+    });
+    
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
