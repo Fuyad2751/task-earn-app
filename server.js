@@ -108,8 +108,6 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     const user = await pool.query('SELECT level FROM users WHERE id = $1', [userId]);
     const userLevel = user.rows[0].level;
     
-    console.log(`User ${userId} level: ${userLevel}`);
-    
     if (userLevel === 1) {
       const hasPackage = await pool.query(
         'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
@@ -133,8 +131,6 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
        ORDER BY t.id`,
       [userLevel]
     );
-    
-    console.log(`Found ${tasks.rows.length} tasks for level ${userLevel}`);
     
     const today = new Date().toISOString().slice(0, 10);
     const completed = await pool.query(
@@ -354,7 +350,30 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
   }
 });
 
-// ============ অ্যাডমিন: ব্যালেন্স যোগ করুন ============
+// ============ ব্যালেন্স রিকোয়েস্ট API ============
+// ইউজার: ব্যালেন্স রিকোয়েস্ট করুন
+app.post('/api/request-balance', authenticate, async (req, res) => {
+  const { amount, transactionId, paymentMethod } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    if (!amount || amount < 100) return res.status(400).json({ error: 'ন্যূনতম ১০০ টাকা আবেদন করতে পারবেন' });
+    if (!transactionId) return res.status(400).json({ error: 'ট্রানজাকশন আইডি দিন' });
+    
+    await pool.query(
+      `INSERT INTO balance_requests (user_id, amount, transaction_id, payment_method, status, requested_at) 
+       VALUES ($1, $2, $3, $4, 'pending', NOW())`,
+      [userId, amount, transactionId, paymentMethod || 'mobile_banking']
+    );
+    res.json({ success: true, message: 'আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করে ব্যালেন্স যোগ করবেন।' });
+  } catch (err) { 
+    console.error('Balance request error:', err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+// ============ অ্যাডমিন API ============
+// অ্যাডমিন: ব্যালেন্স যোগ করুন
 app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
   const { userId, amount } = req.body;
   
@@ -366,7 +385,7 @@ app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// ============ অ্যাডমিন: পেন্ডিং প্যাকেজ ============
+// অ্যাডমিন: পেন্ডিং প্যাকেজ
 app.get('/admin/pending-packages', authenticate, isAdmin, async (req, res) => {
   const pending = await pool.query(`
     SELECT pr.*, u.username 
@@ -377,7 +396,7 @@ app.get('/admin/pending-packages', authenticate, isAdmin, async (req, res) => {
   res.json(pending.rows);
 });
 
-// ============ অ্যাডমিন: প্যাকেজ অ্যাপ্রুভ ============
+// অ্যাডমিন: প্যাকেজ অ্যাপ্রুভ
 app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
   const { requestId } = req.body;
   
@@ -405,7 +424,94 @@ app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// ============ প্যাকেজ কমিশন বিতরণ ফাংশন ============
+// অ্যাডমিন: পেন্ডিং ব্যালেন্স রিকোয়েস্ট দেখুন
+app.get('/admin/pending-balance-requests', authenticate, isAdmin, async (req, res) => {
+  try {
+    const requests = await pool.query(`
+      SELECT br.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
+      FROM balance_requests br
+      JOIN users u ON u.id = br.user_id
+      WHERE br.status = 'pending'
+      ORDER BY br.requested_at ASC
+    `);
+    res.json(requests.rows);
+  } catch (err) { 
+    console.error('Pending balance requests error:', err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+// অ্যাডমিন: ব্যালেন্স রিকোয়েস্ট অ্যাপ্রুভ করুন
+app.post('/admin/approve-balance-request', authenticate, isAdmin, async (req, res) => {
+  const { requestId } = req.body;
+  try {
+    const request = await pool.query('SELECT user_id, amount FROM balance_requests WHERE id = $1 AND status = $2', [requestId, 'pending']);
+    if (request.rows.length === 0) return res.status(404).json({ error: 'রিকোয়েস্ট পাওয়া যায়নি' });
+    const { user_id, amount } = request.rows[0];
+    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, user_id]);
+    await pool.query('UPDATE balance_requests SET status = $1, processed_at = NOW() WHERE id = $2', ['approved', requestId]);
+    res.json({ success: true });
+  } catch (err) { 
+    console.error('Approve balance error:', err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+// অ্যাডমিন: ব্যালেন্স রিকোয়েস্ট রিজেক্ট করুন
+app.post('/admin/reject-balance-request', authenticate, isAdmin, async (req, res) => {
+  const { requestId, note } = req.body;
+  try {
+    await pool.query('UPDATE balance_requests SET status = $1, note = $2, processed_at = NOW() WHERE id = $3', ['rejected', note || '', requestId]);
+    res.json({ success: true });
+  } catch (err) { 
+    console.error('Reject balance error:', err);
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+// অ্যাডমিন: পেন্ডিং উত্তোলন
+app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) => {
+  const pending = await pool.query(`
+    SELECT wr.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
+    FROM withdrawal_requests wr
+    JOIN users u ON u.id = wr.user_id
+    WHERE wr.status='pending'
+  `);
+  res.json(pending.rows);
+});
+
+// অ্যাডমিন: উত্তোলন প্রসেস
+app.post('/admin/process-withdraw', authenticate, isAdmin, async (req, res) => {
+  const { withdrawalId } = req.body;
+  const withdraw = await pool.query('SELECT user_id, amount FROM withdrawal_requests WHERE id=$1 AND status=$2', [withdrawalId, 'pending']);
+  if (withdraw.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+  const { user_id, amount } = withdraw.rows[0];
+  
+  const balance = await pool.query('SELECT total_earnings - total_withdrawn AS balance FROM users WHERE id=$1', [user_id]);
+  if (balance.rows[0].balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
+  
+  await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id=$2', [amount, user_id]);
+  await pool.query('UPDATE withdrawal_requests SET status=$1, processed_at=NOW() WHERE id=$2', ['approved', withdrawalId]);
+  
+  const user = await pool.query('SELECT username FROM users WHERE id=$1', [user_id]);
+  await pool.query('INSERT INTO live_withdrawals (username, amount) VALUES ($1,$2)', [user.rows[0].username, amount]);
+  
+  res.json({ success: true });
+});
+
+// অ্যাডমিন: ইউজার ম্যানেজমেন্ট
+app.get('/admin/users', authenticate, isAdmin, async (req, res) => {
+  const users = await pool.query('SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, created_at FROM users');
+  res.json(users.rows);
+});
+
+app.post('/admin/toggle-user-status', authenticate, isAdmin, async (req, res) => {
+  const { userId, status } = req.body;
+  await pool.query('UPDATE users SET status=$1 WHERE id=$2', [status, userId]);
+  res.json({ success: true });
+});
+
+// ============ কমিশন বিতরণ ফাংশন ============
 async function distributePackageCommission(userId, newLevel, packageAmount) {
   try {
     const user = await pool.query('SELECT referrer_id FROM users WHERE id=$1', [userId]);
@@ -447,7 +553,6 @@ async function distributePackageCommission(userId, newLevel, packageAmount) {
   }
 }
 
-// ============ টাস্ক কমিশন বিতরণ ফাংশন ============
 async function distributeTaskCommission(userId, taskReward, taskLevel) {
   try {
     const user = await pool.query('SELECT referrer_id FROM users WHERE id=$1', [userId]);
@@ -489,114 +594,6 @@ async function distributeTaskCommission(userId, taskReward, taskLevel) {
   }
 }
 
-// ============ অ্যাডমিন: পেন্ডিং উত্তোলন ============
-app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) => {
-  const pending = await pool.query(`
-    SELECT wr.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
-    FROM withdrawal_requests wr
-    JOIN users u ON u.id = wr.user_id
-    WHERE wr.status='pending'
-  `);
-  res.json(pending.rows);
-});
-
-// ============ অ্যাডমিন: উত্তোলন প্রসেস ============
-app.post('/admin/process-withdraw', authenticate, isAdmin, async (req, res) => {
-  const { withdrawalId } = req.body;
-  const withdraw = await pool.query('SELECT user_id, amount FROM withdrawal_requests WHERE id=$1 AND status=$2', [withdrawalId, 'pending']);
-  if (withdraw.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-  const { user_id, amount } = withdraw.rows[0];
-  
-  const balance = await pool.query('SELECT total_earnings - total_withdrawn AS balance FROM users WHERE id=$1', [user_id]);
-  if (balance.rows[0].balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
-  
-  await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id=$2', [amount, user_id]);
-  await pool.query('UPDATE withdrawal_requests SET status=$1, processed_at=NOW() WHERE id=$2', ['approved', withdrawalId]);
-  
-  const user = await pool.query('SELECT username FROM users WHERE id=$1', [user_id]);
-  await pool.query('INSERT INTO live_withdrawals (username, amount) VALUES ($1,$2)', [user.rows[0].username, amount]);
-  
-  res.json({ success: true });
-});
-
-// ============ অ্যাডমিন: ইউজার ম্যানেজমেন্ট ============
-app.get('/admin/users', authenticate, isAdmin, async (req, res) => {
-  const users = await pool.query('SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, created_at FROM users');
-  res.json(users.rows);
-});
-
-app.post('/admin/toggle-user-status', authenticate, isAdmin, async (req, res) => {
-  const { userId, status } = req.body;
-  await pool.query('UPDATE users SET status=$1 WHERE id=$2', [status, userId]);
-  res.json({ success: true });
-});
-
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-// ============ ব্যালেন্স রিকোয়েস্ট টেবিল তৈরি করুন (Supabase SQL Editor এ রান করুন) ============
-// CREATE TABLE IF NOT EXISTS balance_requests (
-//   id SERIAL PRIMARY KEY,
-//   user_id INT REFERENCES users(id),
-//   amount DECIMAL(10,2) NOT NULL,
-//   transaction_id VARCHAR(100),
-//   payment_method VARCHAR(50),
-//   status VARCHAR(20) DEFAULT 'pending',
-//   requested_at TIMESTAMP DEFAULT NOW(),
-//   processed_at TIMESTAMP,
-//   note TEXT
-// );
-
-// ============ ইউজার: ব্যালেন্স রিকোয়েস্ট করুন ============
-app.post('/api/request-balance', authenticate, async (req, res) => {
-  const { amount, transactionId, paymentMethod } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    if (!amount || amount < 100) return res.status(400).json({ error: 'ন্যূনতম ১০০ টাকা আবেদন করতে পারবেন' });
-    if (!transactionId) return res.status(400).json({ error: 'ট্রানজাকশন আইডি দিন' });
-    
-    await pool.query(
-      `INSERT INTO balance_requests (user_id, amount, transaction_id, payment_method, status, requested_at) 
-       VALUES ($1, $2, $3, $4, 'pending', NOW())`,
-      [userId, amount, transactionId, paymentMethod || 'mobile_banking']
-    );
-    res.json({ success: true, message: 'আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করে ব্যালেন্স যোগ করবেন।' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ============ অ্যাডমিন: পেন্ডিং ব্যালেন্স রিকোয়েস্ট দেখুন ============
-app.get('/admin/pending-balance-requests', authenticate, isAdmin, async (req, res) => {
-  try {
-    const requests = await pool.query(`
-      SELECT br.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
-      FROM balance_requests br
-      JOIN users u ON u.id = br.user_id
-      WHERE br.status = 'pending'
-      ORDER BY br.requested_at ASC
-    `);
-    res.json(requests.rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ============ অ্যাডমিন: ব্যালেন্স রিকোয়েস্ট অ্যাপ্রুভ করুন ============
-app.post('/admin/approve-balance-request', authenticate, isAdmin, async (req, res) => {
-  const { requestId } = req.body;
-  try {
-    const request = await pool.query('SELECT user_id, amount FROM balance_requests WHERE id = $1 AND status = $2', [requestId, 'pending']);
-    if (request.rows.length === 0) return res.status(404).json({ error: 'রিকোয়েস্ট পাওয়া যায়নি' });
-    const { user_id, amount } = request.rows[0];
-    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, user_id]);
-    await pool.query('UPDATE balance_requests SET status = $1, processed_at = NOW() WHERE id = $2', ['approved', requestId]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ============ অ্যাডমিন: ব্যালেন্স রিকোয়েস্ট রিজেক্ট করুন ============
-app.post('/admin/reject-balance-request', authenticate, isAdmin, async (req, res) => {
-  const { requestId, note } = req.body;
-  try {
-    await pool.query('UPDATE balance_requests SET status = $1, note = $2, processed_at = NOW() WHERE id = $3', ['rejected', note || '', requestId]);
-    res.json({ success: true });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
