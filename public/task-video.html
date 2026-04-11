@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ভিডিও টাস্ক - টাস্ক কিং</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 1rem;
+        }
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .option-btn {
+            transition: all 0.3s ease;
+        }
+        .option-btn:hover:not(:disabled) {
+            transform: scale(1.02);
+            background-color: rgba(255,255,255,0.2);
+        }
+        .option-btn.disabled-true {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .timer-circle {
+            transition: stroke-dashoffset 0.1s linear;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-video text-2xl"></i>
+                <span class="text-xl font-bold">ভিডিও টাস্ক</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm bg-white/20 px-3 py-1 rounded-full">
+                    <i class="fas fa-chart-simple mr-1"></i> লেভেল <span id="userLevel">১</span>
+                </span>
+                <span class="text-sm bg-white/20 px-3 py-1 rounded-full">
+                    <i class="fas fa-tasks mr-1"></i> <span id="taskCounter">০/০</span>
+                </span>
+                <span class="text-sm bg-yellow-500/30 px-3 py-1 rounded-full">
+                    <i class="fas fa-coins mr-1"></i> <span id="userPoints">০</span> টাকা
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 max-w-3xl">
+        <!-- Task Card -->
+        <div class="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 shadow-xl">
+            <!-- Progress Bar -->
+            <div class="mb-6">
+                <div class="flex justify-between text-sm text-white/70 mb-2">
+                    <span><i class="fas fa-chart-line mr-1"></i> টাস্ক অগ্রগতি</span>
+                    <span id="progressPercent">০%</span>
+                </div>
+                <div class="w-full bg-white/20 rounded-full h-3">
+                    <div id="progressBar" class="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <!-- Task Title -->
+            <h2 id="taskTitle" class="text-2xl font-bold text-white mb-2">লোড হচ্ছে...</h2>
+            <p id="taskDesc" class="text-white/70 mb-6">অনুগ্রহ করে ভিডিওটি মনোযোগ দিয়ে দেখুন</p>
+
+            <!-- Timer -->
+            <div class="flex justify-center mb-4">
+                <div class="relative w-20 h-20">
+                    <svg class="w-full h-full transform -rotate-90">
+                        <circle cx="40" cy="40" r="35" stroke="rgba(255,255,255,0.2)" stroke-width="4" fill="none"/>
+                        <circle id="timerCircle" cx="40" cy="40" r="35" stroke="#fbbf24" stroke-width="4" fill="none" stroke-dasharray="219.8" stroke-dashoffset="0"/>
+                    </svg>
+                    <div class="absolute inset-0 flex items-center justify-center">
+                        <span id="timerText" class="text-white text-xl font-bold">30</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Video Container -->
+            <div class="video-container mb-6">
+                <iframe id="videoFrame" src="" frameborder="0" allowfullscreen></iframe>
+            </div>
+
+            <!-- Question Section (Hidden initially) -->
+            <div id="questionSection" class="hidden">
+                <div class="bg-white/5 rounded-xl p-5 mb-6 border border-white/10">
+                    <h3 class="text-xl font-bold text-yellow-400 mb-3">
+                        <i class="fas fa-question-circle mr-2"></i> ভিডিও সম্পর্কিত প্রশ্ন
+                    </h3>
+                    <p id="questionText" class="text-white text-lg mb-4">প্রশ্ন লোড হচ্ছে...</p>
+                    
+                    <div id="optionsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <!-- Options will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Area -->
+            <div id="messageArea" class="hidden rounded-xl p-4 mb-4"></div>
+
+            <!-- Next Task Button -->
+            <button id="nextTaskBtn" onclick="nextTask()" class="hidden w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-teal-600 transition shadow-lg">
+                <i class="fas fa-arrow-right mr-2"></i> পরবর্তী টাস্ক
+            </button>
+            
+            <!-- Complete Button -->
+            <button id="completeBtn" onclick="completeLevel()" class="hidden w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 transition shadow-lg">
+                <i class="fas fa-trophy mr-2"></i> লেভেল সম্পন্ন! পরবর্তী লেভেলে যান
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
+        <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-home text-xl"></i>
+            <span class="text-xs">হোম</span>
+        </a>
+        <a href="task-video.html" class="flex flex-col items-center text-yellow-400">
+            <i class="fas fa-play-circle text-xl"></i>
+            <span class="text-xs">টাস্ক</span>
+        </a>
+        <a href="packages.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-box text-xl"></i>
+            <span class="text-xs">প্যাকেজ</span>
+        </a>
+        <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-wallet text-xl"></i>
+            <span class="text-xs">উত্তোলন</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-user text-xl"></i>
+            <span class="text-xs">প্রোফাইল</span>
+        </a>
+    </nav>
+
+    <script>
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'login.html';
+        }
+
+        // লেভেল অনুযায়ী টাস্ক ডাটা
+        let currentUserLevel = 1;
+        let tasks = [];
+        let currentTaskIndex = 0;
+        let completedTasks = [];
+        let timerInterval = null;
+        let timeLeft = 30;
+        let videoWatched = false;
+
+        // লেভেল অনুযায়ী টাস্ক জেনারেট করুন
+        function generateTasksForLevel(level) {
+            const taskCount = (level <= 2) ? 5 : 10;
+            const baseReward = [15, 25, 30, 50, 100][level - 1];
+            const difficulty = level <= 2 ? 'সহজ' : (level <= 4 ? 'মাঝারি' : 'কঠিন');
+            
+            const videos = [
+                { id: 'dQw4w9WgXcQ', q: 'ভিডিওতে দেখানো মূল বিষয় কী?', opts: ['টেকনোলজি', 'সঙ্গীত', 'গেমিং', 'শিক্ষা'], correct: 1 },
+                { id: '9bZkp7q19f0', q: 'ভিডিওটির মূল বার্তা কী?', opts: ['সফলতা', 'কঠোর পরিশ্রম', 'ভালোবাসা', 'বন্ধুত্ব'], correct: 1 },
+                { id: 'YVkUvmDQ3HY', q: 'কোন বিষয়ে ভিডিওটি তৈরি?', opts: ['প্রোগ্রামিং', 'ডিজাইন', 'মার্কেটিং', 'বিজনেস'], correct: 0 },
+                { id: 'RzVvThnjY3A', q: 'ভিডিওতে কোন দক্ষতার কথা বলা হয়েছে?', opts: ['লিডারশিপ', 'টিমওয়ার্ক', 'ক্রিয়েটিভিটি', 'এনালাইসিস'], correct: 2 },
+                { id: 'kJQP7kiw5Fk', q: 'ভিডিওটি কী ধরনের কন্টেন্ট?', opts: ['টিউটোরিয়াল', 'ভ্লগ', 'রিভিউ', 'ইন্টারভিউ'], correct: 0 }
+            ];
+            
+            const tasksArray = [];
+            for (let i = 0; i < taskCount; i++) {
+                const video = videos[i % videos.length];
+                tasksArray.push({
+                    id: i + 1,
+                    title: `টাস্ক ${i + 1} (লেভেল ${level})`,
+                    description: `${difficulty} স্তরের ভিডিও দেখুন এবং প্রশ্নের উত্তর দিন`,
+                    videoId: video.id,
+                    question: video.q,
+                    options: [...video.opts],
+                    correct: video.correct,
+                    reward: baseReward
+                });
+            }
+            return tasksArray;
+        }
+
+        // লোড ইউজার লেভেল ও পয়েন্টস
+        async function loadUserData() {
+            const res = await fetch('/api/profile', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                currentUserLevel = data.level || 1;
+                document.getElementById('userLevel').innerText = currentUserLevel;
+                document.getElementById('userPoints').innerText = data.balance || 0;
+                
+                // লেভেল অনুযায়ী টাস্ক লোড করুন
+                tasks = generateTasksForLevel(currentUserLevel);
+                loadCompletedTasks();
+                updateProgress();
+                loadTask();
+            } else {
+                localStorage.removeItem('authToken');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // কমপ্লিটেড টাস্ক লোড করুন
+        function loadCompletedTasks() {
+            const saved = localStorage.getItem(`completedTasks_level${currentUserLevel}`);
+            completedTasks = saved ? JSON.parse(saved) : [];
+            currentTaskIndex = completedTasks.length;
+        }
+
+        // কমপ্লিটেড টাস্ক সেভ করুন
+        function saveCompletedTasks() {
+            localStorage.setItem(`completedTasks_level${currentUserLevel}`, JSON.stringify(completedTasks));
+        }
+
+        // অগ্রগতি আপডেট করুন
+        function updateProgress() {
+            const total = tasks.length;
+            const completed = completedTasks.length;
+            const percent = (completed / total) * 100;
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').innerText = Math.round(percent) + '%';
+            document.getElementById('taskCounter').innerText = `${completed}/${total}`;
+            
+            // সব টাস্ক কমপ্লিট হলে
+            if (completed === total) {
+                document.getElementById('completeBtn').classList.remove('hidden');
+                document.getElementById('nextTaskBtn').classList.add('hidden');
+                document.querySelector('.video-container').classList.add('hidden');
+                document.getElementById('questionSection').classList.add('hidden');
+                document.getElementById('taskTitle').innerHTML = '<i class="fas fa-trophy text-yellow-400 mr-2"></i> লেভেল সম্পন্ন!';
+                document.getElementById('taskDesc').innerHTML = `আপনি লেভেল ${currentUserLevel} এর সব টাস্ক সম্পন্ন করেছেন! পরবর্তী লেভেলে যেতে প্যাকেজ কিনুন।`;
+            }
+        }
+
+        // টাইমার শুরু করুন
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timeLeft = 30;
+            videoWatched = false;
+            const circle = document.getElementById('timerCircle');
+            const circumference = 219.8;
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timerText').innerText = timeLeft;
+                const offset = circumference - (timeLeft / 30) * circumference;
+                circle.style.strokeDashoffset = offset;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    if (!videoWatched) {
+                        videoWatched = true;
+                        showQuestion();
+                    }
+                }
+            }, 1000);
+        }
+
+        // টাস্ক লোড করুন
+        function loadTask() {
+            if (currentTaskIndex >= tasks.length) {
+                updateProgress();
+                return;
+            }
+            
+            const task = tasks[currentTaskIndex];
+            document.getElementById('taskTitle').innerHTML = `<i class="fas fa-play-circle mr-2"></i> ${task.title}`;
+            document.getElementById('taskDesc').innerHTML = task.description;
+            
+            const videoUrl = `https://www.youtube.com/embed/${task.videoId}?autoplay=0&rel=0&modestbranding=1`;
+            document.getElementById('videoFrame').src = videoUrl;
+            
+            document.getElementById('questionSection').classList.add('hidden');
+            document.getElementById('nextTaskBtn').classList.add('hidden');
+            document.getElementById('messageArea').classList.add('hidden');
+            
+            // টাইমার শুরু করুন
+            startTimer();
+        }
+
+        // প্রশ্ন দেখান
+        function showQuestion() {
+            const task = tasks[currentTaskIndex];
+            document.getElementById('questionText').innerHTML = task.question;
+            
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+            
+            task.options.forEach((option, index) => {
+                const btn = document.createElement('button');
+                btn.innerHTML = `<i class="fas fa-circle mr-2"></i> ${option}`;
+                btn.className = 'option-btn w-full text-left px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white hover:bg-white/20 transition';
+                btn.onclick = () => checkAnswer(index);
+                optionsContainer.appendChild(btn);
+            });
+            
+            document.getElementById('questionSection').classList.remove('hidden');
+        }
+
+        // উত্তর চেক করুন
+        async function checkAnswer(selectedIndex) {
+            const task = tasks[currentTaskIndex];
+            const messageArea = document.getElementById('messageArea');
+            
+            if (selectedIndex === task.correct) {
+                // সঠিক উত্তর
+                messageArea.className = 'rounded-xl p-4 mb-4 bg-green-500/20 border border-green-500 text-green-400';
+                messageArea.innerHTML = '<i class="fas fa-check-circle mr-2"></i> সঠিক উত্তর! আপনি টাস্ক সম্পন্ন করেছেন।';
+                messageArea.classList.remove('hidden');
+                
+                // টাস্ক কমপ্লিট মার্ক করুন
+                if (!completedTasks.includes(task.id)) {
+                    completedTasks.push(task.id);
+                    saveCompletedTasks();
+                    await addPoints(task.reward);
+                }
+                
+                // পরবর্তী টাস্কের জন্য বাটন দেখান
+                document.getElementById('nextTaskBtn').classList.remove('hidden');
+                document.getElementById('questionSection').classList.add('hidden');
+                
+                // অপশন বাটন ডিজেবল করুন
+                document.querySelectorAll('.option-btn').forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('disabled-true');
+                });
+                
+                updateProgress();
+            } else {
+                // ভুল উত্তর - টাইমার রিসেট করে ভিডিও আবার দেখান
+                messageArea.className = 'rounded-xl p-4 mb-4 bg-red-500/20 border border-red-500 text-red-400';
+                messageArea.innerHTML = '<i class="fas fa-times-circle mr-2"></i> ভুল উত্তর! ভিডিওটি আবার দেখুন এবং সঠিক উত্তর দিন।';
+                messageArea.classList.remove('hidden');
+                
+                // 2 সেকেন্ড পর ভিডিও রিলোড করুন
+                setTimeout(() => {
+                    messageArea.classList.add('hidden');
+                    resetVideo();
+                }, 2000);
+            }
+        }
+
+        // ভিডিও রিসেট করুন (ভুল উত্তর দিলে)
+        function resetVideo() {
+            const task = tasks[currentTaskIndex];
+            const videoUrl = `https://www.youtube.com/embed/${task.videoId}?autoplay=0&rel=0&modestbranding=1`;
+            document.getElementById('videoFrame').src = videoUrl;
+            document.getElementById('questionSection').classList.add('hidden');
+            startTimer();
+        }
+
+        // পয়েন্ট যোগ করুন
+        async function addPoints(amount) {
+            try {
+                const res = await fetch('/api/complete-task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ taskId: tasks[currentTaskIndex].id })
+                });
+                
+                if (res.ok) {
+                    const pointsRes = await fetch('/api/profile', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (pointsRes.ok) {
+                        const data = await pointsRes.json();
+                        document.getElementById('userPoints').innerText = data.balance || 0;
+                    }
+                }
+            } catch(e) {
+                console.log('Error adding points');
+            }
+        }
+
+        // পরবর্তী টাস্ক
+        function nextTask() {
+            currentTaskIndex++;
+            document.getElementById('messageArea').classList.add('hidden');
+            loadTask();
+        }
+
+        // লেভেল সম্পন্ন
+        function completeLevel() {
+            alert(`অভিনন্দন! আপনি লেভেল ${currentUserLevel} সম্পন্ন করেছেন। পরবর্তী লেভেলের জন্য প্যাকেজ কিনুন।`);
+            window.location.href = 'packages.html';
+        }
+
+        // শুরু করুন
+        loadUserData();
+    </script>
+</body>
+</html>

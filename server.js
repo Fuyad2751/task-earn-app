@@ -236,3 +236,33 @@ app.post('/admin/toggle-user-status', authenticate, isAdmin, async (req, res) =>
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ভিডিও টাস্ক কমপ্লিট API
+app.post('/api/complete-video-task', authenticate, async (req, res) => {
+  const { taskId, reward } = req.body;
+  const userId = req.user.id;
+  const today = new Date().toISOString().slice(0,10);
+  
+  try {
+    // টাস্ক আগে কমপ্লিট হয়েছে কিনা চেক করুন
+    const alreadyCompleted = await pool.query(
+      'SELECT id FROM user_tasks WHERE user_id=$1 AND task_id=$2 AND completed_date=$3',
+      [userId, taskId, today]
+    );
+    
+    if (alreadyCompleted.rows.length > 0) {
+      return res.status(400).json({ error: 'Task already completed today' });
+    }
+    
+    // পয়েন্ট যোগ করুন
+    await pool.query(
+      'INSERT INTO user_tasks (user_id, task_id, completed_date, points_earned) VALUES ($1, $2, $3, $4)',
+      [userId, taskId, today, reward]
+    );
+    
+    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id=$2', [reward, userId]);
+    
+    res.json({ success: true, earned: reward });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
