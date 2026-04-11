@@ -851,3 +851,51 @@ app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) =>
     res.status(500).json({ error: err.message });
   }
 });
+app.post('/api/request-withdraw', authenticate, async (req, res) => {
+  const { amount, withdrawPassword } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    // উত্তোলন একাউন্ট চেক করুন (শুধু is_verified = true)
+    const account = await pool.query(
+      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true AND is_verified = true',
+      [userId]
+    );
+    
+    if (account.rows.length === 0) {
+      return res.status(400).json({ error: 'আপনার উত্তোলন একাউন্ট নেই বা ভেরিফাই করা হয়নি' });
+    }
+    
+    // পাসওয়ার্ড চেক করুন
+    if (account.rows[0].withdraw_password !== withdrawPassword) {
+      return res.status(400).json({ error: 'উত্তোলন পাসওয়ার্ড ভুল!' });
+    }
+    
+    // ব্যালেন্স চেক
+    const user = await pool.query('SELECT total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    
+    if (balance < amount) {
+      return res.status(400).json({ error: 'পর্যাপ্ত ব্যালেন্স নেই' });
+    }
+    
+    const fee = amount * 0.10;
+    const netAmount = amount - fee;
+    
+    // এখানে account_id সঠিকভাবে সেভ হচ্ছে কিনা চেক করুন
+    await pool.query(
+      `INSERT INTO withdrawal_requests (user_id, amount, fee, net_amount, account_id, withdraw_password, status, requested_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())`,
+      [userId, amount, fee, netAmount, account.rows[0].id, withdrawPassword]
+    );
+    
+    // ব্যালেন্স থেকে টাকা কাটুন
+    await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [amount, userId]);
+    
+    res.json({ success: true, message: `উত্তোলন আবেদন জমা হয়েছে। প্রাপ্ত টাকা: ${netAmount} টাকা` });
+    
+  } catch (err) {
+    console.error('Withdraw error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
