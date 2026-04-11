@@ -375,3 +375,96 @@ app.get('/api/referral-commission', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// টাস্ক লোড করার API - শুধু আনলক করা লেভেলের জন্য
+app.get('/api/my-tasks', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    // ইউজারের লেভেল ও আনলক করা লেভেল চেক করুন
+    const user = await pool.query('SELECT level FROM users WHERE id=$1', [userId]);
+    const userLevel = user.rows[0].level;
+    
+    // ইউজার কতগুলো লেভেল আনলক করেছে তা চেক করুন
+    const unlocked = await pool.query(
+      'SELECT level_no FROM user_unlocked_levels WHERE user_id=$1',
+      [userId]
+    );
+    
+    // যদি কোন লেভেল আনলক না করে (শুধু ডিফল্ট লেভেল 1 না থাকলে)
+    if (userLevel === 1 && unlocked.rows.length === 0) {
+      // চেক করুন ইউজার ডিফল্ট লেভেল 1 এর প্যাকেজ কিনেছে কিনা
+      const hasPackage = await pool.query(
+        'SELECT id FROM purchase_requests WHERE user_id=$1 AND level=1 AND status="completed"',
+        [userId]
+      );
+      
+      if (hasPackage.rows.length === 0) {
+        return res.json({ 
+          noPackage: true, 
+          message: 'টাস্ক শুরু করতে প্যাকেজ কিনুন!',
+          level: 1,
+          packagePrice: 500
+        });
+      }
+    }
+    
+    // আনলক করা লেভেলের টাস্ক দেখান
+    const tasks = await pool.query(
+      'SELECT t.*, lp.task_rate FROM tasks t JOIN level_packages lp ON t.level = lp.level WHERE t.level <= $1 ORDER BY t.level, t.id',
+      [userLevel]
+    );
+    
+    const today = new Date().toISOString().slice(0,10);
+    const completed = await pool.query(
+      'SELECT task_id FROM user_daily_tasks WHERE user_id=$1 AND completed_date=$2',
+      [userId, today]
+    );
+    const completedIds = completed.rows.map(r => r.task_id);
+    
+    const tasksWithStatus = tasks.rows.map(t => ({ 
+      ...t, 
+      completed: completedIds.includes(t.id),
+      task_rate: parseFloat(t.task_rate)
+    }));
+    
+    res.json(tasksWithStatus);
+    
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// চেক করুন ইউজার টাস্ক করতে পারবে কিনা
+app.get('/api/can-do-task', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    const user = await pool.query('SELECT level FROM users WHERE id=$1', [userId]);
+    const userLevel = user.rows[0].level;
+    
+    // চেক করুন ইউজার প্যাকেজ কিনেছে কিনা (লেভেল 1 এর বেশি হলে নিশ্চয়ই কিনেছে)
+    if (userLevel > 1) {
+      return res.json({ canDo: true, level: userLevel });
+    }
+    
+    // লেভেল 1 এর জন্য প্যাকেজ চেক করুন
+    const hasPackage = await pool.query(
+      'SELECT id FROM purchase_requests WHERE user_id=$1 AND level=1 AND status="completed"',
+      [userId]
+    );
+    
+    if (hasPackage.rows.length > 0) {
+      return res.json({ canDo: true, level: userLevel });
+    }
+    
+    res.json({ 
+      canDo: false, 
+      level: userLevel,
+      message: 'টাস্ক শুরু করতে লেভেল 1 প্যাকেজ কিনুন!',
+      packagePrice: 500
+    });
+    
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
