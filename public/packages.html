@@ -2,72 +2,382 @@
 <html lang="bn">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>প্যাকেজ সমূহ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>প্যাকেজ সমূহ - টাস্ক কিং</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .package-card {
+            transition: all 0.3s ease;
+        }
+        .package-card:hover {
+            transform: translateY(-5px);
+        }
+        .feature-list li {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
 </head>
-<body class="bg-gray-100 pb-16">
-    <header class="bg-blue-600 text-white p-4 text-center">প্যাকেজ কিনুন</header>
-    <div id="packages" class="p-4 space-y-3"></div>
-   <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
-    <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-home text-xl"></i>
-        <span class="text-xs">হোম</span>
-    </a>
-    <a href="dashboard.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-tasks text-xl"></i>
-        <span class="text-xs">টাস্ক</span>
-    </a>
-    <a href="packages.html" class="flex flex-col items-center text-yellow-400">
-        <i class="fas fa-box text-xl"></i>
-        <span class="text-xs">প্যাকেজ</span>
-    </a>
-    <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-wallet text-xl"></i>
-        <span class="text-xs">উত্তোলন</span>
-    </a>
-    <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-        <i class="fas fa-user text-xl"></i>
-        <span class="text-xs">প্রোফাইল</span>
-    </a>
-</nav>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-box text-2xl"></i>
+                <span class="text-xl font-bold">আপগ্রেড প্যাকেজ</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="text-sm bg-white/20 px-3 py-1 rounded-full">
+                    <i class="fas fa-chart-simple mr-1"></i> লেভেল <span id="userLevel">১</span>
+                </span>
+                <span class="text-sm bg-yellow-500/30 px-3 py-1 rounded-full">
+                    <i class="fas fa-coins mr-1"></i> <span id="userPoints">০</span> টাকা
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6">
+        <!-- Page Title -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">আমাদের প্যাকেজসমূহ</h1>
+            <p class="text-white/70">আপনার লেভেল অনুযায়ী প্যাকেজ কিনুন এবং আয় বাড়ান</p>
+        </div>
+
+        <!-- Level 1 Package -->
+        <div class="package-card bg-gradient-to-br from-green-500/20 to-emerald-600/20 rounded-2xl p-6 mb-6 border border-green-500/30 backdrop-blur">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-green-500 rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+                        <i class="fas fa-star text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">লেভেল ১</h2>
+                        <p class="text-green-400 font-semibold">শুরু করার জন্য আদর্শ</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-300 text-sm">প্যাকেজ মূল্য</p>
+                    <p class="text-3xl font-bold text-white">৫০০ <span class="text-sm">টাকা</span></p>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-tasks text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক টাস্ক</p>
+                    <p class="text-2xl font-bold text-white">৫ টি</p>
+                    <p class="text-gray-400 text-sm">প্রতি টাস্কে ১৫ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-sun text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">৭৫ টাকা</p>
+                    <p class="text-gray-400 text-sm">৫ টাস্ক × ১৫ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-calendar-alt text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">মাসিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">২,২৫০ টাকা</p>
+                    <p class="text-gray-400 text-sm">প্রতিদিন ৭৫ টাকা করে</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <ul class="feature-list grid md:grid-cols-2 gap-2 text-white/80 text-sm">
+                    <li><i class="fas fa-check-circle text-green-400"></i> ন্যূনতম উত্তোলন: ৩৫০ টাকা</li>
+                    <li><i class="fas fa-check-circle text-green-400"></i> ৫টি ভিডিও টাস্ক</li>
+                    <li><i class="fas fa-check-circle text-green-400"></i> রেফারেল কমিশন: ১০%</li>
+                    <li><i class="fas fa-check-circle text-green-400"></i> ২৪/৭ সাপোর্ট</li>
+                </ul>
+            </div>
+            <button onclick="buyPackage(1, 500)" class="mt-5 w-full bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-emerald-700 transition shadow-lg">
+                <i class="fas fa-shopping-cart mr-2"></i> লেভেল ১ প্যাকেজ কিনুন
+            </button>
+        </div>
+
+        <!-- Level 2 Package -->
+        <div class="package-card bg-gradient-to-br from-blue-500/20 to-indigo-600/20 rounded-2xl p-6 mb-6 border border-blue-500/30 backdrop-blur">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-blue-500 rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+                        <i class="fas fa-gem text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">লেভেল ২</h2>
+                        <p class="text-blue-400 font-semibold">আয় বাড়ানোর সময়</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-300 text-sm">প্যাকেজ মূল্য</p>
+                    <p class="text-3xl font-bold text-white">১,০০০ <span class="text-sm">টাকা</span></p>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-tasks text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক টাস্ক</p>
+                    <p class="text-2xl font-bold text-white">৫ টি</p>
+                    <p class="text-gray-400 text-sm">প্রতি টাস্কে ২৫ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-sun text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">১২৫ টাকা</p>
+                    <p class="text-gray-400 text-sm">৫ টাস্ক × ২৫ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-calendar-alt text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">মাসিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">৩,৭৫০ টাকা</p>
+                    <p class="text-gray-400 text-sm">প্রতিদিন ১২৫ টাকা করে</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <ul class="feature-list grid md:grid-cols-2 gap-2 text-white/80 text-sm">
+                    <li><i class="fas fa-check-circle text-blue-400"></i> ন্যূনতম উত্তোলন: ৫০০ টাকা</li>
+                    <li><i class="fas fa-check-circle text-blue-400"></i> ৫টি ভিডিও টাস্ক</li>
+                    <li><i class="fas fa-check-circle text-blue-400"></i> রেফারেল কমিশন: ১০%</li>
+                    <li><i class="fas fa-check-circle text-blue-400"></i> ২৪/৭ সাপোর্ট</li>
+                </ul>
+            </div>
+            <button onclick="buyPackage(2, 1000)" class="mt-5 w-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold py-3 rounded-xl hover:from-blue-600 hover:to-indigo-700 transition shadow-lg">
+                <i class="fas fa-shopping-cart mr-2"></i> লেভেল ২ প্যাকেজ কিনুন
+            </button>
+        </div>
+
+        <!-- Level 3 Package -->
+        <div class="package-card bg-gradient-to-br from-purple-500/20 to-pink-600/20 rounded-2xl p-6 mb-6 border border-purple-500/30 backdrop-blur">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-purple-500 rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+                        <i class="fas fa-crown text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">লেভেল ৩</h2>
+                        <p class="text-purple-400 font-semibold">প্রফেশনাল লেভেল</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-300 text-sm">প্যাকেজ মূল্য</p>
+                    <p class="text-3xl font-bold text-white">৫,০০০ <span class="text-sm">টাকা</span></p>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-tasks text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক টাস্ক</p>
+                    <p class="text-2xl font-bold text-white">১০ টি</p>
+                    <p class="text-gray-400 text-sm">প্রতি টাস্কে ৩০ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-sun text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">৩০০ টাকা</p>
+                    <p class="text-gray-400 text-sm">১০ টাস্ক × ৩০ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-calendar-alt text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">মাসিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">৯,০০০ টাকা</p>
+                    <p class="text-gray-400 text-sm">প্রতিদিন ৩০০ টাকা করে</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <ul class="feature-list grid md:grid-cols-2 gap-2 text-white/80 text-sm">
+                    <li><i class="fas fa-check-circle text-purple-400"></i> ন্যূনতম উত্তোলন: ১,০০০ টাকা</li>
+                    <li><i class="fas fa-check-circle text-purple-400"></i> ১০টি ভিডিও টাস্ক</li>
+                    <li><i class="fas fa-check-circle text-purple-400"></i> রেফারেল কমিশন: ১০%</li>
+                    <li><i class="fas fa-check-circle text-purple-400"></i> ২৪/৭ সাপোর্ট</li>
+                    <li><i class="fas fa-check-circle text-purple-400"></i> প্রিমিয়াম সাপোর্ট</li>
+                </ul>
+            </div>
+            <button onclick="buyPackage(3, 5000)" class="mt-5 w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-bold py-3 rounded-xl hover:from-purple-600 hover:to-pink-700 transition shadow-lg">
+                <i class="fas fa-shopping-cart mr-2"></i> লেভেল ৩ প্যাকেজ কিনুন
+            </button>
+        </div>
+
+        <!-- Level 4 Package -->
+        <div class="package-card bg-gradient-to-br from-orange-500/20 to-red-600/20 rounded-2xl p-6 mb-6 border border-orange-500/30 backdrop-blur">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-orange-500 rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+                        <i class="fas fa-trophy text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">লেভেল ৪</h2>
+                        <p class="text-orange-400 font-semibold">এক্সপার্ট লেভেল</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-300 text-sm">প্যাকেজ মূল্য</p>
+                    <p class="text-3xl font-bold text-white">১০,০০০ <span class="text-sm">টাকা</span></p>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-tasks text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক টাস্ক</p>
+                    <p class="text-2xl font-bold text-white">১০ টি</p>
+                    <p class="text-gray-400 text-sm">প্রতি টাস্কে ৫০ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-sun text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">৫০০ টাকা</p>
+                    <p class="text-gray-400 text-sm">১০ টাস্ক × ৫০ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-calendar-alt text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">মাসিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">১৫,০০০ টাকা</p>
+                    <p class="text-gray-400 text-sm">প্রতিদিন ৫০০ টাকা করে</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <ul class="feature-list grid md:grid-cols-2 gap-2 text-white/80 text-sm">
+                    <li><i class="fas fa-check-circle text-orange-400"></i> ন্যূনতম উত্তোলন: ১,০০০ টাকা</li>
+                    <li><i class="fas fa-check-circle text-orange-400"></i> ১০টি ভিডিও টাস্ক</li>
+                    <li><i class="fas fa-check-circle text-orange-400"></i> রেফারেল কমিশন: ১০%</li>
+                    <li><i class="fas fa-check-circle text-orange-400"></i> ২৪/৭ সাপোর্ট</li>
+                    <li><i class="fas fa-check-circle text-orange-400"></i> প্রিমিয়াম সাপোর্ট</li>
+                </ul>
+            </div>
+            <button onclick="buyPackage(4, 10000)" class="mt-5 w-full bg-gradient-to-r from-orange-500 to-red-600 text-white font-bold py-3 rounded-xl hover:from-orange-600 hover:to-red-700 transition shadow-lg">
+                <i class="fas fa-shopping-cart mr-2"></i> লেভেল ৪ প্যাকেজ কিনুন
+            </button>
+        </div>
+
+        <!-- Level 5 Package -->
+        <div class="package-card bg-gradient-to-br from-yellow-500/20 to-amber-600/20 rounded-2xl p-6 mb-6 border border-yellow-500/30 backdrop-blur">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div class="flex items-center gap-4">
+                    <div class="bg-yellow-500 rounded-full w-16 h-16 flex items-center justify-center shadow-lg">
+                        <i class="fas fa-medal text-2xl text-white"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold text-white">লেভেল ৫</h2>
+                        <p class="text-yellow-400 font-semibold">আলটিমেট লেভেল</p>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <p class="text-gray-300 text-sm">প্যাকেজ মূল্য</p>
+                    <p class="text-3xl font-bold text-white">২৫,০০০ <span class="text-sm">টাকা</span></p>
+                </div>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-tasks text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক টাস্ক</p>
+                    <p class="text-2xl font-bold text-white">১০ টি</p>
+                    <p class="text-gray-400 text-sm">প্রতি টাস্কে ১০০ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-sun text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">দৈনিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">১,০০০ টাকা</p>
+                    <p class="text-gray-400 text-sm">১০ টাস্ক × ১০০ টাকা</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center">
+                    <i class="fas fa-calendar-alt text-yellow-400 text-xl mb-1"></i>
+                    <p class="text-white font-semibold">মাসিক আয়</p>
+                    <p class="text-2xl font-bold text-green-400">৩০,০০০ টাকা</p>
+                    <p class="text-gray-400 text-sm">প্রতিদিন ১,০০০ টাকা করে</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <ul class="feature-list grid md:grid-cols-2 gap-2 text-white/80 text-sm">
+                    <li><i class="fas fa-check-circle text-yellow-400"></i> ন্যূনতম উত্তোলন: ৫,০০০ টাকা</li>
+                    <li><i class="fas fa-check-circle text-yellow-400"></i> ১০টি ভিডিও টাস্ক</li>
+                    <li><i class="fas fa-check-circle text-yellow-400"></i> রেফারেল কমিশন: ১০%</li>
+                    <li><i class="fas fa-check-circle text-yellow-400"></i> ২৪/৭ সাপোর্ট</li>
+                    <li><i class="fas fa-check-circle text-yellow-400"></i> VIP সাপোর্ট</li>
+                </ul>
+            </div>
+            <button onclick="buyPackage(5, 25000)" class="mt-5 w-full bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold py-3 rounded-xl hover:from-yellow-600 hover:to-amber-700 transition shadow-lg">
+                <i class="fas fa-shopping-cart mr-2"></i> লেভেল ৫ প্যাকেজ কিনুন
+            </button>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
+        <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-home text-xl"></i>
+            <span class="text-xs">হোম</span>
+        </a>
+        <a href="task-video.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-play-circle text-xl"></i>
+            <span class="text-xs">টাস্ক</span>
+        </a>
+        <a href="packages.html" class="flex flex-col items-center text-yellow-400">
+            <i class="fas fa-box text-xl"></i>
+            <span class="text-xs">প্যাকেজ</span>
+        </a>
+        <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-wallet text-xl"></i>
+            <span class="text-xs">উত্তোলন</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+            <i class="fas fa-user text-xl"></i>
+            <span class="text-xs">প্রোফাইল</span>
+        </a>
+    </nav>
+
     <script>
         const token = localStorage.getItem('authToken');
-        if (!token) window.location.href = 'login.html';
-        
-        async function loadPackages() {
-            const res = await fetch('/api/packages');
-            const pkgs = await res.json();
-            const container = document.getElementById('packages');
-            container.innerHTML = pkgs.map(p => `
-                <div class="bg-white p-4 rounded shadow">
-                    <h3 class="font-bold text-xl">লেভেল ${p.level}</h3>
-                    <p>মূল্য: ${p.price} টাকা</p>
-                    <p>দৈনিক টাস্ক: ${p.daily_tasks}টি, প্রতি টাস্কে ${p.task_rate} টাকা</p>
-                    <p>ন্যূনতম উত্তোলন: ${p.min_withdraw} টাকা</p>
-                    <button onclick="buyPackage(${p.level})" class="mt-2 bg-green-600 text-white px-4 py-1 rounded">প্যাকেজ কিনুন</button>
-                </div>
-            `).join('');
+        if (!token) {
+            window.location.href = 'login.html';
         }
-        
-        async function buyPackage(level) {
+
+        // লোড ইউজার লেভেল ও পয়েন্টস
+        async function loadUserData() {
+            const res = await fetch('/api/profile', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('userLevel').innerText = data.level || 1;
+                document.getElementById('userPoints').innerText = data.balance || 0;
+            } else {
+                localStorage.removeItem('authToken');
+                window.location.href = 'login.html';
+            }
+        }
+
+        // প্যাকেজ কেনার ফাংশন
+        async function buyPackage(level, price) {
+            // চেক করুন ইউজার ইতিমধ্যে এই লেভেল বা তার উপরে আছে কিনা
+            const userLevel = parseInt(document.getElementById('userLevel').innerText);
+            if (userLevel >= level) {
+                alert(`আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন বা এর উপরে!`);
+                return;
+            }
+
             const txid = prompt('আপনার লেনদেন আইডি (TxID) দিন:');
             if (!txid) return;
-            
+
             const formData = new FormData();
             formData.append('level', level);
             formData.append('transactionId', txid);
-            
+
             const res = await fetch('/api/request-package', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
-            if (res.ok) alert('আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করবেন।');
-            else alert('দুঃখিত, সমস্যা হয়েছে');
+
+            if (res.ok) {
+                alert(`লেভেল ${level} প্যাকেজের আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করবেন।`);
+            } else {
+                const error = await res.json();
+                alert(error.error || 'দুঃখিত, সমস্যা হয়েছে');
+            }
         }
-        
-        loadPackages();
+
+        loadUserData();
     </script>
 </body>
 </html>
