@@ -3,62 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>লগইন / রেজিস্টার</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 p-6">
-    <div class="max-w-md mx-auto bg-white p-6 rounded shadow">
-        <div class="flex border-b mb-4">
-            <button id="loginTab" class="flex-1 py-2 text-blue-600 border-b-2 border-blue-600">লগইন</button>
-            <button id="registerTab" class="flex-1 py-2 text-gray-600">রেজিস্টার</button>
-        </div>
-        <div id="loginForm">
-            <input type="text" id="loginUsername" placeholder="ইউজারনেম" class="w-full border p-2 mb-3 rounded">
-            <input type="password" id="loginPassword" placeholder="পাসওয়ার্ড" class="w-full border p-2 mb-3 rounded">
-            <button onclick="login()" class="bg-blue-600 text-white w-full py-2 rounded">লগইন</button>
-        </div>
-        <div id="registerForm" class="hidden">
-            <input type="text" id="regUsername" placeholder="ইউজারনেম" class="w-full border p-2 mb-3 rounded">
-            <input type="password" id="regPassword" placeholder="পাসওয়ার্ড" class="w-full border p-2 mb-3 rounded">
-            <input type="text" id="regMobile" placeholder="মোবাইল নম্বর" class="w-full border p-2 mb-3 rounded">
-            <input type="text" id="refCode" placeholder="রেফারেল কোড (ঐচ্ছিক)" class="w-full border p-2 mb-3 rounded">
-            <button onclick="register()" class="bg-green-600 text-white w-full py-2 rounded">রেজিস্টার</button>
-        </div>
-    </div>
+    <title>রিডাইরেক্ট...</title>
     <script>
-        const tokenKey = 'authToken';
-        function setToken(token) { localStorage.setItem(tokenKey, token); window.location.href = 'dashboard.html'; }
-        async function login() {
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: loginUsername.value, password: loginPassword.value })
-            });
-            if (res.ok) { const data = await res.json(); setToken(data.token); }
-            else alert('ভুল ইউজারনেম বা পাসওয়ার্ড');
-        }
-        async function register() {
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: regUsername.value, password: regPassword.value, mobile: regMobile.value, referralCode: refCode.value })
-            });
-            if (res.ok) { const data = await res.json(); setToken(data.token); }
-            else alert('ইউজারনেম আগে থেকেই আছে');
-        }
-        document.getElementById('loginTab').onclick = () => { 
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('registerForm').classList.add('hidden');
-            document.getElementById('loginTab').classList.add('border-b-2');
-            document.getElementById('registerTab').classList.remove('border-b-2');
-        };
-        document.getElementById('registerTab').onclick = () => {
-            document.getElementById('registerForm').classList.remove('hidden');
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('registerTab').classList.add('border-b-2');
-            document.getElementById('loginTab').classList.remove('border-b-2');
-        };
-        if (localStorage.getItem(tokenKey)) window.location.href = 'dashboard.html';
+        // সরাসরি রেজিস্ট্রেশন পেজে নিয়ে যান
+        window.location.href = 'register.html';
     </script>
+</head>
+<body>
+    <p>রিডাইরেক্ট হচ্ছে...</p>
 </body>
 </html>
