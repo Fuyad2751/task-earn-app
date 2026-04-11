@@ -46,20 +46,25 @@
                 return;
             }
 
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
+            try {
+                const res = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
 
-            if (res.ok) {
-                const data = await res.json();
-                localStorage.setItem('authToken', data.token);
-                alert('লগইন সফল!');
-                window.location.href = 'dashboard.html';
-            } else {
-                const error = await res.json();
-                alert(error.error || 'ভুল ইউজারনেম বা পাসওয়ার্ড');
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.setItem('authToken', data.token);
+                    alert('লগইন সফল!');
+                    // এখানে dashboard-home.html এ রিডাইরেক্ট করা হয়েছে
+                    window.location.href = 'dashboard-home.html';
+                } else {
+                    const error = await res.json();
+                    alert(error.error || 'ভুল ইউজারনেম বা পাসওয়ার্ড');
+                }
+            } catch (err) {
+                alert('সার্ভারে সমস্যা, পরে আবার চেষ্টা করুন');
             }
         }
     </script>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ড্যাশবোর্ড - টাস্ক কিং</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        @keyframes slide {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+        .marquee {
+            white-space: nowrap;
+            overflow: hidden;
+            display: flex;
+            animation: slide 20s linear infinite;
+        }
+        .marquee:hover {
+            animation-play-state: paused;
+        }
+        .marquee span {
+            display: inline-block;
+            padding-right: 2rem;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-20">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-tasks text-2xl"></i>
+                <span class="text-xl font-bold">টাস্ক কিং</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="text-sm bg-white/20 px-3 py-1 rounded-full">
+                    <i class="fas fa-coins mr-1"></i> <span id="userBalance">০</span> টাকা
+                </span>
+                <a href="logout.html" class="text-white/80 hover:text-white">
+                    <i class="fas fa-sign-out-alt"></i>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6">
+        <!-- Welcome Card -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white mb-8 shadow-xl">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-2xl font-bold">স্বাগতম, <span id="userName">...</span>!</h1>
+                    <p class="text-white/80 mt-1">আজকে আপনার টাস্ক সম্পন্ন করুন এবং আয় করুন</p>
+                </div>
+                <div class="bg-white/20 rounded-full p-3">
+                    <i class="fas fa-user-circle text-4xl"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center border border-white/20">
+                <i class="fas fa-chart-line text-2xl text-yellow-400 mb-2"></i>
+                <p class="text-gray-300 text-sm">আজকের উপার্জন</p>
+                <p class="text-white text-xl font-bold" id="todayEarn">০ টাকা</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center border border-white/20">
+                <i class="fas fa-level-up-alt text-2xl text-green-400 mb-2"></i>
+                <p class="text-gray-300 text-sm">আপনার লেভেল</p>
+                <p class="text-white text-xl font-bold" id="userLevel">১</p>
+            </div>
+        </div>
+
+        <!-- Features Section -->
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-star text-yellow-400"></i> সাইটের বৈশিষ্ট্য
+            </h2>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <i class="fas fa-tasks text-2xl text-blue-400 mb-2"></i>
+                    <p class="text-white text-sm font-semibold">দৈনিক টাস্ক</p>
+                    <p class="text-gray-400 text-xs">প্রতিদিন ৫-১০ টি টাস্ক</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <i class="fas fa-money-bill-wave text-2xl text-green-400 mb-2"></i>
+                    <p class="text-white text-sm font-semibold">তাৎক্ষণিক উত্তোলন</p>
+                    <p class="text-gray-400 text-xs">বিকাশ, নগদ, রকেট</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <i class="fas fa-users text-2xl text-purple-400 mb-2"></i>
+                    <p class="text-white text-sm font-semibold">রেফারেল বোনাস</p>
+                    <p class="text-gray-400 text-xs">আপনার কোড শেয়ার করুন</p>
+                </div>
+                <div class="bg-white/5 rounded-xl p-3 text-center border border-white/10">
+                    <i class="fas fa-shield-alt text-2xl text-orange-400 mb-2"></i>
+                    <p class="text-white text-sm font-semibold">১০০% নিরাপদ</p>
+                    <p class="text-gray-400 text-xs">সুরক্ষিত পেমেন্ট</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Withdrawals Marquee -->
+        <div class="mb-8">
+            <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <i class="fas fa-bell text-yellow-400"></i> লাইভ উত্তোলন
+            </h2>
+            <div class="bg-black/40 rounded-xl p-4 border border-white/10 overflow-hidden">
+                <div class="marquee flex" id="marqueeContent">
+                    <!-- Live withdrawal items will appear here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="grid grid-cols-2 gap-3">
+            <a href="dashboard.html" class="bg-gradient-to-r from-yellow-500 to-orange-500 text-center text-white font-bold py-3 rounded-xl hover:from-yellow-600 hover:to-orange-600 transition shadow-lg">
+                <i class="fas fa-play-circle mr-2"></i> টাস্ক শুরু করুন
+            </a>
+            <a href="packages.html" class="bg-white/10 backdrop-blur border border-white/20 text-center text-white font-bold py-3 rounded-xl hover:bg-white/20 transition">
+                <i class="fas fa-gem mr-2"></i> প্যাকেজ আপগ্রেড
+            </a>
+            <a href="withdraw.html" class="bg-white/10 backdrop-blur border border-white/20 text-center text-white font-bold py-3 rounded-xl hover:bg-white/20 transition">
+                <i class="fas fa-hand-holding-usd mr-2"></i> উত্তোলন
+            </a>
+            <a href="profile.html" class="bg-white/10 backdrop-blur border border-white/20 text-center text-white font-bold py-3 rounded-xl hover:bg-white/20 transition">
+                <i class="fas fa-user mr-2"></i> প্রোফাইল
+            </a>
+        </div>
+    </div>
+
+    <!-- Bottom Navigation -->
+    <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
+        <a href="dashboard-home.html" class="flex flex-col items-center text-yellow-400">
+            <i class="fas fa-home text-xl"></i>
+            <span class="text-xs">হোম</span>
+        </a>
+        <a href="dashboard.html" class="flex flex-col items-center text-gray-400 hover:text-white">
+            <i class="fas fa-tasks text-xl"></i>
+            <span class="text-xs">টাস্ক</span>
+        </a>
+        <a href="packages.html" class="flex flex-col items-center text-gray-400 hover:text-white">
+            <i class="fas fa-box text-xl"></i>
+            <span class="text-xs">প্যাকেজ</span>
+        </a>
+        <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-white">
+            <i class="fas fa-wallet text-xl"></i>
+            <span class="text-xs">উত্তোলন</span>
+        </a>
+        <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-white">
+            <i class="fas fa-user text-xl"></i>
+            <span class="text-xs">প্রোফাইল</span>
+        </a>
+    </nav>
+
+    <script>
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'login.html';
+        }
+
+        async function loadProfile() {
+            const res = await fetch('/api/profile', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('userName').innerText = data.username;
+                document.getElementById('userBalance').innerText = data.balance;
+                document.getElementById('userLevel').innerText = data.level;
+                document.getElementById('todayEarn').innerText = data.total_earnings || '0';
+            } else {
+                localStorage.removeItem('authToken');
+                window.location.href = 'login.html';
+            }
+        }
+
+        async function loadLiveWithdrawals() {
+            const res = await fetch('/api/live-withdrawals');
+            const data = await res.json();
+            const marquee = document.getElementById('marqueeContent');
+            if (data.length === 0) {
+                marquee.innerHTML = '<span class="text-gray-400">কোনো উত্তোলন এখনও হয়নি</span>';
+            } else {
+                // Duplicate items for seamless scrolling
+                const items = data.map(w => `<span class="text-white mx-4"><i class="fas fa-user-circle text-yellow-400 mr-2"></i>${w.username} - ${w.amount} টাকা উত্তোলন করেছেন</span>`).join('');
+                marquee.innerHTML = items + items; // Double for smooth loop
+            }
+        }
+
+        loadProfile();
+        loadLiveWithdrawals();
+        setInterval(loadLiveWithdrawals, 30000);
+        setInterval(loadProfile, 60000);
+    </script>
+</body>
+</html>
