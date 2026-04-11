@@ -47,7 +47,6 @@ app.post('/api/register', async (req, res) => {
   try {
     const hashed = await bcrypt.hash(password, 10);
     
-    // ইউনিক রেফারেল কোড জেনারেট করুন
     let refCode;
     let isUnique = false;
     while (!isUnique) {
@@ -58,7 +57,6 @@ app.post('/api/register', async (req, res) => {
     
     let referrerId = null;
     
-    // রেফারেল কোড চেক করুন
     if (referralCode && referralCode.trim() !== '') {
       const refUser = await pool.query(
         'SELECT id FROM users WHERE referral_code = $1', 
@@ -66,7 +64,6 @@ app.post('/api/register', async (req, res) => {
       );
       if (refUser.rows.length > 0) {
         referrerId = refUser.rows[0].id;
-        console.log(`User ${username} referred by ${referrerId}`);
       }
     }
     
@@ -103,18 +100,19 @@ app.get('/api/packages', async (req, res) => {
   res.json(packages.rows);
 });
 
-// ============ টাস্ক API ============
+// ============ টাস্ক API - শুধু বর্তমান লেভেলের টাস্ক দেখাবে ============
 app.get('/api/my-tasks', authenticate, async (req, res) => {
   const userId = req.user.id;
   
   try {
-    const user = await pool.query('SELECT level FROM users WHERE id=$1', [userId]);
+    const user = await pool.query('SELECT level FROM users WHERE id = $1', [userId]);
     const userLevel = user.rows[0].level;
     
-    // চেক করুন ইউজার প্যাকেজ কিনেছে কিনা
+    console.log(`User ${userId} level: ${userLevel}`);
+    
     if (userLevel === 1) {
       const hasPackage = await pool.query(
-        'SELECT id FROM purchase_requests WHERE user_id=$1 AND level=1 AND status=$2',
+        'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
         [userId, 'approved']
       );
       
@@ -128,13 +126,19 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     }
     
     const tasks = await pool.query(
-      'SELECT t.*, lp.task_rate FROM tasks t JOIN level_packages lp ON t.level = lp.level WHERE t.level <= $1 ORDER BY t.level, t.id',
+      `SELECT t.*, lp.task_rate 
+       FROM tasks t 
+       JOIN level_packages lp ON t.level = lp.level 
+       WHERE t.level = $1 
+       ORDER BY t.id`,
       [userLevel]
     );
     
-    const today = new Date().toISOString().slice(0,10);
+    console.log(`Found ${tasks.rows.length} tasks for level ${userLevel}`);
+    
+    const today = new Date().toISOString().slice(0, 10);
     const completed = await pool.query(
-      'SELECT task_id FROM user_daily_tasks WHERE user_id=$1 AND completed_date=$2',
+      'SELECT task_id FROM user_daily_tasks WHERE user_id = $1 AND completed_date = $2',
       [userId, today]
     );
     const completedIds = completed.rows.map(r => r.task_id);
@@ -148,6 +152,7 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     res.json(tasksWithStatus);
     
   } catch (err) {
+    console.error('Tasks API error:', err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -187,7 +192,6 @@ app.post('/api/complete-task', authenticate, async (req, res) => {
     
     await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id=$2', [reward, userId]);
     
-    // টাস্ক কমিশন বিতরণ
     await distributeTaskCommission(userId, reward, taskLevel);
     
     res.json({ success: true, earned: reward });
@@ -350,6 +354,18 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
   }
 });
 
+// ============ অ্যাডমিন: ব্যালেন্স যোগ করুন ============
+app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
+  const { userId, amount } = req.body;
+  
+  try {
+    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============ অ্যাডমিন: পেন্ডিং প্যাকেজ ============
 app.get('/admin/pending-packages', authenticate, isAdmin, async (req, res) => {
   const pending = await pool.query(`
@@ -379,7 +395,6 @@ app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
     await pool.query('UPDATE users SET level=$1 WHERE id=$2 AND level<$1', [level, user_id]);
     await pool.query('UPDATE purchase_requests SET status=$1, verified_at=NOW() WHERE id=$2', ['approved', requestId]);
     
-    // রেফারেল কমিশন বিতরণ
     await distributePackageCommission(user_id, level, amount);
     
     res.json({ success: true });
@@ -406,7 +421,6 @@ async function distributePackageCommission(userId, newLevel, packageAmount) {
         const referrerId = referrer.rows[0].id;
         const referrerLevel = referrer.rows[0].level;
         
-        // শুধুমাত্র তখনই কমিশন দেবেন যখন রেফারারের লেভেল >= ইউজারের লেভেল
         if (referrerLevel >= newLevel) {
           const commission = packageAmount * commissionRates[generation];
           
@@ -419,7 +433,6 @@ async function distributePackageCommission(userId, newLevel, packageAmount) {
             );
             
             await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id=$2', [commission, referrerId]);
-            console.log(`${generation}st gen commission: ${commission} to ${referrer.rows[0].username}`);
           }
         }
       }
@@ -450,7 +463,6 @@ async function distributeTaskCommission(userId, taskReward, taskLevel) {
         const referrerId = referrer.rows[0].id;
         const referrerLevel = referrer.rows[0].level;
         
-        // শুধুমাত্র তখনই কমিশন দেবেন যখন রেফারারের লেভেল >= ইউজারের লেভেল
         if (referrerLevel >= taskLevel) {
           const commission = taskReward * commissionRates[generation];
           
@@ -509,7 +521,7 @@ app.post('/admin/process-withdraw', authenticate, isAdmin, async (req, res) => {
 
 // ============ অ্যাডমিন: ইউজার ম্যানেজমেন্ট ============
 app.get('/admin/users', authenticate, isAdmin, async (req, res) => {
-  const users = await pool.query('SELECT id, username, mobile, level, total_earnings, status, referral_code FROM users');
+  const users = await pool.query('SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, created_at FROM users');
   res.json(users.rows);
 });
 
@@ -522,14 +534,3 @@ app.post('/admin/toggle-user-status', authenticate, isAdmin, async (req, res) =>
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-// অ্যাডমিন: ব্যালেন্স যোগ করুন
-app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
-  const { userId, amount } = req.body;
-  
-  try {
-    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, userId]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
