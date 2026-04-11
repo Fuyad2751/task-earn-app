@@ -522,3 +522,14 @@ app.post('/admin/toggle-user-status', authenticate, isAdmin, async (req, res) =>
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// অ্যাডমিন: ব্যালেন্স যোগ করুন
+app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
+  const { userId, amount } = req.body;
+  
+  try {
+    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, userId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
