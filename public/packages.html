@@ -9,13 +9,28 @@
 <body class="bg-gray-100 pb-16">
     <header class="bg-blue-600 text-white p-4 text-center">প্যাকেজ কিনুন</header>
     <div id="packages" class="p-4 space-y-3"></div>
-    <nav class="fixed bottom-0 left-0 w-full bg-white border-t flex justify-around py-2">
-        <button onclick="location.href='index.html'">🏠 হোম</button>
-        <button onclick="location.href='packages.html'">📦 প্যাকেজ</button>
-        <button onclick="location.href='withdraw.html'">💰 উত্তোলন</button>
-        <button onclick="location.href='profile.html'">👤 প্রোফাইল</button>
-        <button onclick="location.href='support.html'">🆘 সাপোর্ট</button>
-    </nav>
+   <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
+    <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+        <i class="fas fa-home text-xl"></i>
+        <span class="text-xs">হোম</span>
+    </a>
+    <a href="dashboard.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+        <i class="fas fa-tasks text-xl"></i>
+        <span class="text-xs">টাস্ক</span>
+    </a>
+    <a href="packages.html" class="flex flex-col items-center text-yellow-400">
+        <i class="fas fa-box text-xl"></i>
+        <span class="text-xs">প্যাকেজ</span>
+    </a>
+    <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+        <i class="fas fa-wallet text-xl"></i>
+        <span class="text-xs">উত্তোলন</span>
+    </a>
+    <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
+        <i class="fas fa-user text-xl"></i>
+        <span class="text-xs">প্রোফাইল</span>
+    </a>
+</nav>
     <script>
         const token = localStorage.getItem('authToken');
         if (!token) window.location.href = 'login.html';
