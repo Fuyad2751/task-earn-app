@@ -100,7 +100,7 @@ app.get('/api/packages', async (req, res) => {
   res.json(packages.rows);
 });
 
-// ============ টাস্ক API - শুধু বর্তমান লেভেলের টাস্ক দেখাবে ============
+// ============ টাস্ক API ============
 app.get('/api/my-tasks', authenticate, async (req, res) => {
   const userId = req.user.id;
   
@@ -198,7 +198,50 @@ app.post('/api/complete-task', authenticate, async (req, res) => {
   }
 });
 
-// ============ প্যাকেজ ক্রয় রিকোয়েস্ট API ============
+// ============ প্যাকেজ ক্রয় API (অটোমেটিক) ============
+app.post('/api/buy-package', authenticate, async (req, res) => {
+  const { level } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    const userLevel = user.rows[0].level;
+    
+    if (userLevel >= level) {
+      return res.status(400).json({ error: 'You already have this level or higher' });
+    }
+    
+    const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
+    const packagePrice = pkg.rows[0].price;
+    const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    
+    if (userBalance >= packagePrice) {
+      await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
+      await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
+      await distributePackageCommission(userId, level, packagePrice);
+      
+      res.json({ 
+        success: true, 
+        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!`,
+        autoApproved: true
+      });
+    } else {
+      const needAmount = packagePrice - userBalance;
+      res.json({ 
+        success: false, 
+        needBalance: true,
+        needAmount: needAmount,
+        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা যোগ করতে ব্যালেন্স রিকোয়েস্ট করুন।`
+      });
+    }
+    
+  } catch (err) {
+    console.error('Package buy error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ প্যাকেজ ক্রয় রিকোয়েস্ট API (ম্যানুয়াল) ============
 app.post('/api/request-package', authenticate, upload.single('screenshot'), async (req, res) => {
   const { level, transactionId } = req.body;
   const userId = req.user.id;
@@ -214,28 +257,6 @@ app.post('/api/request-package', authenticate, upload.single('screenshot'), asyn
     [userId, level, amount, transactionId, screenshotPath, 'pending']
   );
   res.json({ success: true, message: 'Request submitted. Admin will verify.' });
-});
-
-// ============ উত্তোলন রিকোয়েস্ট API ============
-app.post('/api/request-withdraw', authenticate, async (req, res) => {
-  const { amount } = req.body;
-  const userId = req.user.id;
-  const user = await pool.query('SELECT level FROM users WHERE id=$1', [userId]);
-  const pkg = await pool.query('SELECT min_withdraw FROM level_packages WHERE level=$1', [user.rows[0].level]);
-  const minWithdraw = parseFloat(pkg.rows[0].min_withdraw);
-  if (amount < minWithdraw) return res.status(400).json({ error: `Minimum withdrawal is ${minWithdraw} Tk` });
-  
-  const balance = await pool.query('SELECT total_earnings - total_withdrawn AS balance FROM users WHERE id=$1', [userId]);
-  if (balance.rows[0].balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
-  
-  const today = new Date().getDay();
-  if (today === 5) return res.status(400).json({ error: 'Withdrawals are not processed on Fridays' });
-  
-  await pool.query(
-    'INSERT INTO withdrawal_requests (user_id, amount, status) VALUES ($1,$2,$3)',
-    [userId, amount, 'pending']
-  );
-  res.json({ success: true, message: 'Withdrawal request submitted. Will be processed within 24 hours.' });
 });
 
 // ============ প্রোফাইল API ============
@@ -351,7 +372,6 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
 });
 
 // ============ ব্যালেন্স রিকোয়েস্ট API ============
-// ইউজার: ব্যালেন্স রিকোয়েস্ট করুন
 app.post('/api/request-balance', authenticate, async (req, res) => {
   const { amount, transactionId, paymentMethod } = req.body;
   const userId = req.user.id;
@@ -365,15 +385,129 @@ app.post('/api/request-balance', authenticate, async (req, res) => {
        VALUES ($1, $2, $3, $4, 'pending', NOW())`,
       [userId, amount, transactionId, paymentMethod || 'mobile_banking']
     );
-    res.json({ success: true, message: 'আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করে ব্যালেন্স যোগ করবেন।' });
+    res.json({ success: true, message: 'আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করে ব্যালেন্স যোগ করবেন။' });
   } catch (err) { 
     console.error('Balance request error:', err);
     res.status(500).json({ error: err.message }); 
   }
 });
 
+// ============ উত্তোলন একাউন্ট API ============
+app.post('/api/create-withdrawal-account', authenticate, async (req, res) => {
+  const { accountName, accountNumber, accountType, withdrawPassword } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    if (!accountName || !accountNumber || !withdrawPassword) {
+      return res.status(400).json({ error: 'সব ঘর পূরণ করুন' });
+    }
+    
+    const existing = await pool.query(
+      'SELECT id FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true',
+      [userId]
+    );
+    
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ error: 'আপনার ইতিমধ্যে একটি একাউন্ট আছে। পরিবর্তন করতে অ্যাডমিনে যোগাযোগ করুন।' });
+    }
+    
+    await pool.query(
+      `INSERT INTO withdrawal_accounts (user_id, account_name, account_number, account_type, withdraw_password, is_active, is_verified, requested_at) 
+       VALUES ($1, $2, $3, $4, $5, true, false, NOW())`,
+      [userId, accountName, accountNumber, accountType || 'bkash', withdrawPassword]
+    );
+    
+    res.json({ success: true, message: 'উত্তোলন একাউন্ট তৈরি করা হয়েছে। অ্যাডমিন যাচাই করবেন।' });
+    
+  } catch (err) {
+    console.error('Create account error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/my-withdrawal-account', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    const account = await pool.query(
+      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true',
+      [userId]
+    );
+    res.json(account.rows[0] || null);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ উত্তোলন রিকোয়েস্ট API (আবেদনের সাথে সাথে ব্যালেন্স কর্তন) ============
+app.post('/api/request-withdraw', authenticate, async (req, res) => {
+  const { amount, withdrawPassword } = req.body;
+  const userId = req.user.id;
+  const today = new Date().toISOString().slice(0,10);
+  
+  try {
+    const account = await pool.query(
+      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true AND is_verified = true',
+      [userId]
+    );
+    
+    if (account.rows.length === 0) {
+      return res.status(400).json({ error: 'আপনার উত্তোলন একাউন্ট নেই বা ভেরিফাই করা হয়নি' });
+    }
+    
+    if (account.rows[0].withdraw_password !== withdrawPassword) {
+      return res.status(400).json({ error: 'উত্তোলন পাসওয়ার্ড ভুল!' });
+    }
+    
+    const todayWithdraw = await pool.query(
+      'SELECT id FROM withdrawal_requests WHERE user_id = $1 AND DATE(requested_at) = $2',
+      [userId, today]
+    );
+    
+    if (todayWithdraw.rows.length > 0) {
+      return res.status(400).json({ error: 'আপনি আজ ইতিমধ্যে একটি উত্তোলন আবেদন করেছেন। আগামীকাল চেষ্টা করুন।' });
+    }
+    
+    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    const pkg = await pool.query('SELECT min_withdraw FROM level_packages WHERE level=$1', [user.rows[0].level]);
+    const minWithdraw = parseFloat(pkg.rows[0].min_withdraw);
+    
+    if (amount < minWithdraw) {
+      return res.status(400).json({ error: `ন্যূনতম উত্তোলন ${minWithdraw} টাকা` });
+    }
+    
+    const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    if (balance < amount) {
+      return res.status(400).json({ error: 'পর্যাপ্ত ব্যালেন্স নেই' });
+    }
+    
+    const fee = amount * 0.10;
+    const netAmount = amount - fee;
+    
+    // ✅ ব্যালেন্স থেকে টাকা কর্তন করুন (এখনই)
+    await pool.query(
+      'UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2',
+      [amount, userId]
+    );
+    
+    await pool.query(
+      `INSERT INTO withdrawal_requests (user_id, amount, fee, net_amount, account_id, withdraw_password, status, requested_at) 
+       VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())`,
+      [userId, amount, fee, netAmount, account.rows[0].id, withdrawPassword]
+    );
+    
+    res.json({ 
+      success: true, 
+      message: `উত্তোলন আবেদন জমা হয়েছে। ${amount} টাকা আপনার ব্যালেন্স থেকে কেটে নেওয়া হয়েছে। অ্যাডমিন অ্যাপ্রুভ দিলে ${netAmount} টাকা আপনার একাউন্টে পাঠানো হবে।` 
+    });
+    
+  } catch (err) {
+    console.error('Withdraw request error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============ অ্যাডমিন API ============
-// অ্যাডমিন: ব্যালেন্স যোগ করুন
 app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
   const { userId, amount } = req.body;
   
@@ -385,7 +519,6 @@ app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// অ্যাডমিন: পেন্ডিং প্যাকেজ
 app.get('/admin/pending-packages', authenticate, isAdmin, async (req, res) => {
   const pending = await pool.query(`
     SELECT pr.*, u.username 
@@ -396,7 +529,6 @@ app.get('/admin/pending-packages', authenticate, isAdmin, async (req, res) => {
   res.json(pending.rows);
 });
 
-// অ্যাডমিন: প্যাকেজ অ্যাপ্রুভ
 app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
   const { requestId } = req.body;
   
@@ -424,7 +556,6 @@ app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// অ্যাডমিন: পেন্ডিং ব্যালেন্স রিকোয়েস্ট দেখুন
 app.get('/admin/pending-balance-requests', authenticate, isAdmin, async (req, res) => {
   try {
     const requests = await pool.query(`
@@ -441,7 +572,6 @@ app.get('/admin/pending-balance-requests', authenticate, isAdmin, async (req, re
   }
 });
 
-// অ্যাডমিন: ব্যালেন্স রিকোয়েস্ট অ্যাপ্রুভ করুন
 app.post('/admin/approve-balance-request', authenticate, isAdmin, async (req, res) => {
   const { requestId } = req.body;
   try {
@@ -457,7 +587,6 @@ app.post('/admin/approve-balance-request', authenticate, isAdmin, async (req, re
   }
 });
 
-// অ্যাডমিন: ব্যালেন্স রিকোয়েস্ট রিজেক্ট করুন
 app.post('/admin/reject-balance-request', authenticate, isAdmin, async (req, res) => {
   const { requestId, note } = req.body;
   try {
@@ -469,37 +598,133 @@ app.post('/admin/reject-balance-request', authenticate, isAdmin, async (req, res
   }
 });
 
-// অ্যাডমিন: পেন্ডিং উত্তোলন
+// অ্যাডমিন: পেন্ডিং উত্তোলন (একাউন্ট তথ্য সহ)
 app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) => {
-  const pending = await pool.query(`
-    SELECT wr.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
-    FROM withdrawal_requests wr
-    JOIN users u ON u.id = wr.user_id
-    WHERE wr.status='pending'
-  `);
-  res.json(pending.rows);
+  try {
+    const pending = await pool.query(`
+      SELECT wr.*, u.username, u.mobile, wa.account_name, wa.account_number, wa.account_type
+      FROM withdrawal_requests wr
+      JOIN users u ON u.id = wr.user_id
+      JOIN withdrawal_accounts wa ON wa.id = wr.account_id
+      WHERE wr.status = 'pending'
+      ORDER BY wr.requested_at ASC
+    `);
+    res.json(pending.rows);
+  } catch (err) {
+    console.error('Pending withdrawals error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// অ্যাডমিন: উত্তোলন প্রসেস
+// অ্যাডমিন: উত্তোলন অ্যাপ্রুভ করুন
 app.post('/admin/process-withdraw', authenticate, isAdmin, async (req, res) => {
   const { withdrawalId } = req.body;
-  const withdraw = await pool.query('SELECT user_id, amount FROM withdrawal_requests WHERE id=$1 AND status=$2', [withdrawalId, 'pending']);
-  if (withdraw.rows.length === 0) return res.status(404).json({ error: 'Not found' });
-  const { user_id, amount } = withdraw.rows[0];
   
-  const balance = await pool.query('SELECT total_earnings - total_withdrawn AS balance FROM users WHERE id=$1', [user_id]);
-  if (balance.rows[0].balance < amount) return res.status(400).json({ error: 'Insufficient balance' });
-  
-  await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id=$2', [amount, user_id]);
-  await pool.query('UPDATE withdrawal_requests SET status=$1, processed_at=NOW() WHERE id=$2', ['approved', withdrawalId]);
-  
-  const user = await pool.query('SELECT username FROM users WHERE id=$1', [user_id]);
-  await pool.query('INSERT INTO live_withdrawals (username, amount) VALUES ($1,$2)', [user.rows[0].username, amount]);
-  
-  res.json({ success: true });
+  try {
+    const withdraw = await pool.query(
+      'SELECT user_id, amount, net_amount FROM withdrawal_requests WHERE id = $1 AND status = $2',
+      [withdrawalId, 'pending']
+    );
+    if (withdraw.rows.length === 0) {
+      return res.status(404).json({ error: 'রিকোয়েস্ট পাওয়া যায়নি' });
+    }
+    
+    await pool.query(
+      'UPDATE withdrawal_requests SET status = $1, processed_at = NOW() WHERE id = $2',
+      ['approved', withdrawalId]
+    );
+    
+    const user = await pool.query('SELECT username FROM users WHERE id = $1', [withdraw.rows[0].user_id]);
+    await pool.query(
+      'INSERT INTO live_withdrawals (username, amount) VALUES ($1, $2)',
+      [user.rows[0].username, withdraw.rows[0].net_amount]
+    );
+    
+    res.json({ success: true, message: 'উত্তোলন অ্যাপ্রুভ করা হয়েছে এবং টাকা পাঠানো হবে' });
+    
+  } catch (err) {
+    console.error('Process withdraw error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// অ্যাডমিন: ইউজার ম্যানেজমেন্ট
+// অ্যাডমিন: উত্তোলন রিজেক্ট করুন (টাকা ফেরত)
+app.post('/admin/reject-withdraw', authenticate, isAdmin, async (req, res) => {
+  const { withdrawalId, reason } = req.body;
+  
+  try {
+    const withdraw = await pool.query(
+      'SELECT user_id, amount FROM withdrawal_requests WHERE id = $1 AND status = $2',
+      [withdrawalId, 'pending']
+    );
+    if (withdraw.rows.length === 0) {
+      return res.status(404).json({ error: 'রিকোয়েস্ট পাওয়া যায়নি' });
+    }
+    
+    const { user_id, amount } = withdraw.rows[0];
+    
+    // ✅ টাকা ফেরত দিন
+    await pool.query(
+      'UPDATE users SET total_withdrawn = total_withdrawn - $1 WHERE id = $2',
+      [amount, user_id]
+    );
+    
+    await pool.query(
+      'UPDATE withdrawal_requests SET status = $1, note = $2, processed_at = NOW() WHERE id = $3',
+      ['rejected', reason || 'অ্যাডমিন দ্বারা বাতিল', withdrawalId]
+    );
+    
+    res.json({ success: true, message: 'উত্তোলন রিজেক্ট করা হয়েছে এবং টাকা ফেরত দেওয়া হয়েছে' });
+    
+  } catch (err) {
+    console.error('Reject withdraw error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/pending-withdrawal-accounts', authenticate, isAdmin, async (req, res) => {
+  try {
+    const accounts = await pool.query(`
+      SELECT wa.*, u.username, u.mobile 
+      FROM withdrawal_accounts wa
+      JOIN users u ON u.id = wa.user_id
+      WHERE wa.is_verified = false
+      ORDER BY wa.requested_at ASC
+    `);
+    res.json(accounts.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/admin/verify-withdrawal-account', authenticate, isAdmin, async (req, res) => {
+  const { accountId } = req.body;
+  
+  try {
+    await pool.query(
+      'UPDATE withdrawal_accounts SET is_verified = true, verified_at = NOW() WHERE id = $1',
+      [accountId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/admin/deactivate-withdrawal-account', authenticate, isAdmin, async (req, res) => {
+  const { accountId } = req.body;
+  
+  try {
+    await pool.query(
+      'UPDATE withdrawal_accounts SET is_active = false WHERE id = $1',
+      [accountId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/admin/users', authenticate, isAdmin, async (req, res) => {
   const users = await pool.query('SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, created_at FROM users');
   res.json(users.rows);
@@ -597,305 +822,3 @@ async function distributeTaskCommission(userId, taskReward, taskLevel) {
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-app.post('/api/request-package', authenticate, async (req, res) => {
-  const { level, transactionId, useBalance } = req.body;
-  const userId = req.user.id;
-  const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
-  
-  if (user.rows[0].level >= parseInt(level)) {
-    return res.status(400).json({ error: 'You already have this level or higher' });
-  }
-  
-  const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
-  const amount = pkg.rows[0].price;
-  
-  // যদি ব্যালেন্স ব্যবহার করে কেনে, তাহলে ব্যালেন্স চেক করুন
-  if (useBalance) {
-    const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
-    if (balance < amount) {
-      return res.status(400).json({ error: 'Insufficient balance' });
-    }
-  }
-  
-  await pool.query(
-    'INSERT INTO purchase_requests (user_id, level, amount, transaction_id, status) VALUES ($1,$2,$3,$4,$5)',
-    [userId, level, amount, transactionId, 'pending']
-  );
-  res.json({ success: true, message: 'Request submitted. Admin will verify.' });
-});
-// ============ প্যাকেজ ক্রয় API (অটোমেটিক) ============
-app.post('/api/buy-package', authenticate, async (req, res) => {
-  const { level } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
-    const userLevel = user.rows[0].level;
-    
-    if (userLevel >= level) {
-      return res.status(400).json({ error: 'You already have this level or higher' });
-    }
-    
-    const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
-    const packagePrice = pkg.rows[0].price;
-    const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
-    
-    if (userBalance >= packagePrice) {
-      // ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
-      await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
-      
-      // ব্যালেন্স থেকে টাকা কাটুন
-      await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
-      
-      // রেফারেল কমিশন বিতরণ
-      await distributePackageCommission(userId, level, packagePrice);
-      
-      res.json({ 
-        success: true, 
-        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!`,
-        autoApproved: true
-      });
-    } else {
-      // ব্যালেন্স কম - অ্যাডমিন অ্যাপ্রুভ প্রয়োজন
-      const needAmount = packagePrice - userBalance;
-      res.json({ 
-        success: false, 
-        needBalance: true,
-        needAmount: needAmount,
-        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা যোগ করতে ব্যালেন্স রিকোয়েস্ট করুন।`
-      });
-    }
-    
-  } catch (err) {
-    console.error('Package buy error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-// ============ উত্তোলন একাউন্ট API ============
-
-// ইউজার: উত্তোলন একাউন্ট তৈরি করুন
-app.post('/api/create-withdrawal-account', authenticate, async (req, res) => {
-  const { accountName, accountNumber, accountType, withdrawPassword } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    if (!accountName || !accountNumber || !withdrawPassword) {
-      return res.status(400).json({ error: 'সব ঘর পূরণ করুন' });
-    }
-    
-    // আগের একাউন্ট চেক করুন
-    const existing = await pool.query(
-      'SELECT id FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true',
-      [userId]
-    );
-    
-    if (existing.rows.length > 0) {
-      return res.status(400).json({ error: 'আপনার ইতিমধ্যে একটি একাউন্ট আছে। পরিবর্তন করতে অ্যাডমিনে যোগাযোগ করুন।' });
-    }
-    
-    await pool.query(
-      `INSERT INTO withdrawal_accounts (user_id, account_name, account_number, account_type, withdraw_password, is_active, is_verified, requested_at) 
-       VALUES ($1, $2, $3, $4, $5, true, false, NOW())`,
-      [userId, accountName, accountNumber, accountType || 'bkash', withdrawPassword]
-    );
-    
-    res.json({ success: true, message: 'উত্তোলন একাউন্ট তৈরি করা হয়েছে। অ্যাডমিন যাচাই করবেন।' });
-    
-  } catch (err) {
-    console.error('Create account error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ইউজার: আমার উত্তোলন একাউন্ট দেখুন
-app.get('/api/my-withdrawal-account', authenticate, async (req, res) => {
-  const userId = req.user.id;
-  
-  try {
-    const account = await pool.query(
-      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true',
-      [userId]
-    );
-    res.json(account.rows[0] || null);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// অ্যাডমিন: পেন্ডিং উত্তোলন একাউন্ট দেখুন
-app.get('/admin/pending-withdrawal-accounts', authenticate, isAdmin, async (req, res) => {
-  try {
-    const accounts = await pool.query(`
-      SELECT wa.*, u.username, u.mobile 
-      FROM withdrawal_accounts wa
-      JOIN users u ON u.id = wa.user_id
-      WHERE wa.is_verified = false
-      ORDER BY wa.requested_at ASC
-    `);
-    res.json(accounts.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// অ্যাডমিন: উত্তোলন একাউন্ট ভেরিফাই করুন
-app.post('/admin/verify-withdrawal-account', authenticate, isAdmin, async (req, res) => {
-  const { accountId } = req.body;
-  
-  try {
-    await pool.query(
-      'UPDATE withdrawal_accounts SET is_verified = true, verified_at = NOW() WHERE id = $1',
-      [accountId]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// অ্যাডমিন: উত্তোলন একাউন্ট নিষ্ক্রিয় করুন
-app.post('/admin/deactivate-withdrawal-account', authenticate, isAdmin, async (req, res) => {
-  const { accountId } = req.body;
-  
-  try {
-    await pool.query(
-      'UPDATE withdrawal_accounts SET is_active = false WHERE id = $1',
-      [accountId]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// আপডেটেড উত্তোলন রিকোয়েস্ট API
-app.post('/api/request-withdraw', authenticate, async (req, res) => {
-  const { amount, withdrawPassword } = req.body;
-  const userId = req.user.id;
-  const today = new Date().toISOString().slice(0,10);
-  
-  try {
-    // উত্তোলন একাউন্ট চেক করুন
-    const account = await pool.query(
-      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true AND is_verified = true',
-      [userId]
-    );
-    
-    if (account.rows.length === 0) {
-      return res.status(400).json({ error: 'আপনার উত্তোলন একাউন্ট নেই বা ভেরিফাই করা হয়নি' });
-    }
-    
-    // পাসওয়ার্ড চেক করুন
-    if (account.rows[0].withdraw_password !== withdrawPassword) {
-      return res.status(400).json({ error: 'উত্তোলন পাসওয়ার্ড ভুল!' });
-    }
-    
-    // দিনে একবার উত্তোলন চেক করুন
-    const todayWithdraw = await pool.query(
-      'SELECT id FROM withdrawal_requests WHERE user_id = $1 AND DATE(requested_at) = $2',
-      [userId, today]
-    );
-    
-    if (todayWithdraw.rows.length > 0) {
-      return res.status(400).json({ error: 'আপনি আজ ইতিমধ্যে একটি উত্তোলন আবেদন করেছেন। আগামীকাল চেষ্টা করুন।' });
-    }
-    
-    // ইউজারের লেভেল ও ব্যালেন্স চেক
-    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
-    const pkg = await pool.query('SELECT min_withdraw FROM level_packages WHERE level=$1', [user.rows[0].level]);
-    const minWithdraw = parseFloat(pkg.rows[0].min_withdraw);
-    
-    if (amount < minWithdraw) {
-      return res.status(400).json({ error: `ন্যূনতম উত্তোলন ${minWithdraw} টাকা` });
-    }
-    
-    const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
-    if (balance < amount) {
-      return res.status(400).json({ error: 'পর্যাপ্ত ব্যালেন্স নেই' });
-    }
-    
-    // উত্তোলন ফি (10%)
-    const fee = amount * 0.10;
-    const netAmount = amount - fee;
-    
-    await pool.query(
-      `INSERT INTO withdrawal_requests (user_id, amount, fee, net_amount, account_id, withdraw_password, status, requested_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())`,
-      [userId, amount, fee, netAmount, account.rows[0].id, withdrawPassword]
-    );
-    
-    res.json({ 
-      success: true, 
-      message: `উত্তোলন আবেদন জমা হয়েছে। ফি সহ প্রাপ্ত টাকা: ${netAmount} টাকা। ২৪ ঘন্টার মধ্যে প্রেরণ করা হবে।` 
-    });
-    
-  } catch (err) {
-    console.error('Withdraw request error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// অ্যাডমিন: পেন্ডিং উত্তোলন রিকোয়েস্ট (একাউন্ট তথ্য সহ)
-app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) => {
-  try {
-    const pending = await pool.query(`
-      SELECT wr.*, u.username, u.mobile, wa.account_name, wa.account_number, wa.account_type
-      FROM withdrawal_requests wr
-      JOIN users u ON u.id = wr.user_id
-      JOIN withdrawal_accounts wa ON wa.id = wr.account_id
-      WHERE wr.status = 'pending'
-      ORDER BY wr.requested_at ASC
-    `);
-    res.json(pending.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-app.post('/api/request-withdraw', authenticate, async (req, res) => {
-  const { amount, withdrawPassword } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    // উত্তোলন একাউন্ট চেক করুন (শুধু is_verified = true)
-    const account = await pool.query(
-      'SELECT * FROM withdrawal_accounts WHERE user_id = $1 AND is_active = true AND is_verified = true',
-      [userId]
-    );
-    
-    if (account.rows.length === 0) {
-      return res.status(400).json({ error: 'আপনার উত্তোলন একাউন্ট নেই বা ভেরিফাই করা হয়নি' });
-    }
-    
-    // পাসওয়ার্ড চেক করুন
-    if (account.rows[0].withdraw_password !== withdrawPassword) {
-      return res.status(400).json({ error: 'উত্তোলন পাসওয়ার্ড ভুল!' });
-    }
-    
-    // ব্যালেন্স চেক
-    const user = await pool.query('SELECT total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
-    const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
-    
-    if (balance < amount) {
-      return res.status(400).json({ error: 'পর্যাপ্ত ব্যালেন্স নেই' });
-    }
-    
-    const fee = amount * 0.10;
-    const netAmount = amount - fee;
-    
-    // এখানে account_id সঠিকভাবে সেভ হচ্ছে কিনা চেক করুন
-    await pool.query(
-      `INSERT INTO withdrawal_requests (user_id, amount, fee, net_amount, account_id, withdraw_password, status, requested_at) 
-       VALUES ($1, $2, $3, $4, $5, $6, 'pending', NOW())`,
-      [userId, amount, fee, netAmount, account.rows[0].id, withdrawPassword]
-    );
-    
-    // ব্যালেন্স থেকে টাকা কাটুন
-    await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [amount, userId]);
-    
-    res.json({ success: true, message: `উত্তোলন আবেদন জমা হয়েছে। প্রাপ্ত টাকা: ${netAmount} টাকা` });
-    
-  } catch (err) {
-    console.error('Withdraw error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});

@@ -40,37 +40,30 @@
         
         <nav class="p-3">
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showDashboard()">
-                <i class="fas fa-chart-line w-5"></i>
-                <span>ড্যাশবোর্ড</span>
+                <i class="fas fa-chart-line w-5"></i><span>ড্যাশবোর্ড</span>
             </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showUsers()">
-                <i class="fas fa-users w-5"></i>
-                <span>সকল ইউজার</span>
+                <i class="fas fa-users w-5"></i><span>সকল ইউজার</span>
                 <span id="userCount" class="ml-auto bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showPackages()">
-                <i class="fas fa-box w-5"></i>
-                <span>প্যাকেজ রিকোয়েস্ট</span>
+                <i class="fas fa-box w-5"></i><span>প্যাকেজ রিকোয়েস্ট</span>
                 <span id="packageCount" class="ml-auto bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showWithdrawals()">
-                <i class="fas fa-hand-holding-usd w-5"></i>
-                <span>উত্তোলন রিকোয়েস্ট</span>
+                <i class="fas fa-hand-holding-usd w-5"></i><span>উত্তোলন রিকোয়েস্ট</span>
                 <span id="withdrawCount" class="ml-auto bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showBalanceRequests()">
-                <i class="fas fa-plus-circle w-5"></i>
-                <span>ব্যালেন্স রিকোয়েস্ট</span>
+                <i class="fas fa-plus-circle w-5"></i><span>ব্যালেন্স রিকোয়েস্ট</span>
                 <span id="balanceReqCount" class="ml-auto bg-purple-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showWithdrawalAccounts()">
-                <i class="fas fa-user-check w-5"></i>
-                <span>উত্তোলন একাউন্ট</span>
+                <i class="fas fa-user-check w-5"></i><span>উত্তোলন একাউন্ট</span>
                 <span id="withdrawAccCount" class="ml-auto bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showSettings()">
-                <i class="fas fa-cog w-5"></i>
-                <span>সেটিংস</span>
+                <i class="fas fa-cog w-5"></i><span>সেটিংস</span>
             </div>
         </nav>
         
@@ -93,75 +86,35 @@
         <div id="dashboardSection" class="section">
             <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">ড্যাশবোর্ড</h1>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start"><div><p class="text-blue-100 text-sm">মোট ইউজার</p><p class="text-3xl font-bold" id="totalUsers">0</p></div><i class="fas fa-users text-3xl text-blue-200"></i></div>
-                </div>
-                <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start"><div><p class="text-green-100 text-sm">মোট উত্তোলন</p><p class="text-3xl font-bold" id="totalWithdrawals">0</p></div><i class="fas fa-hand-holding-usd text-3xl text-green-200"></i></div>
-                </div>
-                <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start"><div><p class="text-purple-100 text-sm">মোট উপার্জন</p><p class="text-3xl font-bold" id="totalEarnings">0</p></div><i class="fas fa-chart-line text-3xl text-purple-200"></i></div>
-                </div>
-                <div class="stat-card bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl p-4 text-white shadow-lg">
-                    <div class="flex justify-between items-start"><div><p class="text-yellow-100 text-sm">একটিভ ইউজার</p><p class="text-3xl font-bold" id="activeUsers">0</p></div><i class="fas fa-user-check text-3xl text-yellow-200"></i></div>
-                </div>
+                <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg"><div class="flex justify-between items-start"><div><p class="text-blue-100 text-sm">মোট ইউজার</p><p class="text-3xl font-bold" id="totalUsers">0</p></div><i class="fas fa-users text-3xl text-blue-200"></i></div></div>
+                <div class="stat-card bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-lg"><div class="flex justify-between items-start"><div><p class="text-green-100 text-sm">মোট উত্তোলন</p><p class="text-3xl font-bold" id="totalWithdrawals">0</p></div><i class="fas fa-hand-holding-usd text-3xl text-green-200"></i></div></div>
+                <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-lg"><div class="flex justify-between items-start"><div><p class="text-purple-100 text-sm">মোট উপার্জন</p><p class="text-3xl font-bold" id="totalEarnings">0</p></div><i class="fas fa-chart-line text-3xl text-purple-200"></i></div></div>
+                <div class="stat-card bg-gradient-to-br from-yellow-500 to-orange-500 rounded-xl p-4 text-white shadow-lg"><div class="flex justify-between items-start"><div><p class="text-yellow-100 text-sm">একটিভ ইউজার</p><p class="text-3xl font-bold" id="activeUsers">0</p></div><i class="fas fa-user-check text-3xl text-yellow-200"></i></div></div>
             </div>
-            <div class="bg-white/10 backdrop-blur rounded-xl p-4 mb-6 border border-white/20">
-                <h3 class="text-white font-bold mb-4">মাসিক আয়ের গ্রাফ</h3>
-                <canvas id="earningsChart" height="200"></canvas>
-            </div>
-            <div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
-                <h3 class="text-white font-bold mb-4">সাম্প্রতিক ইউজার</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-white text-sm">
-                        <thead class="border-b border-white/20"><tr><th class="text-left py-2">ইউজারনেম</th><th class="text-left py-2">লেভেল</th><th class="text-left py-2">ব্যালেন্স</th><th class="text-left py-2">স্ট্যাটাস</th><th class="text-left py-2">জয়েন</th></tr></thead>
-                        <tbody id="recentUsersList"></tbody>
-                    </table>
-                </div>
-            </div>
+            <div class="bg-white/10 backdrop-blur rounded-xl p-4 mb-6 border border-white/20"><h3 class="text-white font-bold mb-4">মাসিক আয়ের গ্রাফ</h3><canvas id="earningsChart" height="200"></canvas></div>
+            <div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20"><h3 class="text-white font-bold mb-4">সাম্প্রতিক ইউজার</h3><div class="overflow-x-auto"><table class="w-full text-white text-sm"><thead class="border-b border-white/20"><tr><th class="text-left py-2">ইউজারনেম</th><th class="text-left py-2">লেভেল</th><th class="text-left py-2">ব্যালেন্স</th><th class="text-left py-2">স্ট্যাটাস</th><th class="text-left py-2">জয়েন</th></tr></thead><tbody id="recentUsersList"></tbody></table></div></div>
         </div>
 
         <!-- Users Section -->
         <div id="usersSection" class="section hidden">
             <div class="flex justify-between items-center mb-6"><h1 class="text-2xl md:text-3xl font-bold text-white">সকল ইউজার</h1><div class="relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="userSearch" placeholder="ইউজার খুঁজুন..." class="pl-10 pr-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"></div></div>
-            <div class="bg-white/10 backdrop-blur rounded-xl overflow-hidden border border-white/20">
-                <div class="overflow-x-auto"><table class="w-full text-white text-sm"><thead class="bg-white/20"><tr><th class="px-4 py-3 text-left">আইডি</th><th class="px-4 py-3 text-left">ইউজারনেম</th><th class="px-4 py-3 text-left">মোবাইল</th><th class="px-4 py-3 text-left">লেভেল</th><th class="px-4 py-3 text-left">ব্যালেন্স</th><th class="px-4 py-3 text-left">স্ট্যাটাস</th><th class="px-4 py-3 text-left">অ্যাকশন</th></tr></thead><tbody id="usersList"></tbody></table></div>
-            </div>
+            <div class="bg-white/10 backdrop-blur rounded-xl overflow-hidden border border-white/20"><div class="overflow-x-auto"><table class="w-full text-white text-sm"><thead class="bg-white/20"><tr><th class="px-4 py-3 text-left">আইডি</th><th class="px-4 py-3 text-left">ইউজারনেম</th><th class="px-4 py-3 text-left">মোবাইল</th><th class="px-4 py-3 text-left">লেভেল</th><th class="px-4 py-3 text-left">ব্যালেন্স</th><th class="px-4 py-3 text-left">স্ট্যাটাস</th><th class="px-4 py-3 text-left">অ্যাকশন</th></tr></thead><tbody id="usersList"></tbody></table></div></div>
         </div>
 
         <!-- Packages Section -->
-        <div id="packagesSection" class="section hidden">
-            <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">প্যাকেজ ক্রয় রিকোয়েস্ট</h1>
-            <div id="packageRequestsList" class="space-y-3"></div>
-        </div>
+        <div id="packagesSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">প্যাকেজ ক্রয় রিকোয়েস্ট</h1><div id="packageRequestsList" class="space-y-3"></div></div>
 
         <!-- Withdrawals Section -->
-        <div id="withdrawalsSection" class="section hidden">
-            <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">উত্তোলন রিকোয়েস্ট</h1>
-            <div id="withdrawalsList" class="space-y-3"></div>
-        </div>
+        <div id="withdrawalsSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">উত্তোলন রিকোয়েস্ট</h1><div id="withdrawalsList" class="space-y-3"></div></div>
 
         <!-- Balance Requests Section -->
-        <div id="balanceRequestsSection" class="section hidden">
-            <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">ব্যালেন্স অ্যাড রিকোয়েস্ট</h1>
-            <div id="balanceRequestsList" class="space-y-3"></div>
-        </div>
+        <div id="balanceRequestsSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">ব্যালেন্স অ্যাড রিকোয়েস্ট</h1><div id="balanceRequestsList" class="space-y-3"></div></div>
 
         <!-- Withdrawal Accounts Section -->
-        <div id="withdrawalAccountsSection" class="section hidden">
-            <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">উত্তোলন একাউন্ট ভেরিফিকেশন</h1>
-            <div id="withdrawalAccountsList" class="space-y-3"></div>
-        </div>
+        <div id="withdrawalAccountsSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">উত্তোলন একাউন্ট ভেরিফিকেশন</h1><div id="withdrawalAccountsList" class="space-y-3"></div></div>
 
         <!-- Settings Section -->
-        <div id="settingsSection" class="section hidden">
-            <h1 class="text-2xl md:text-3xl font-bold text-white mb-6">সেটিংস</h1>
-            <div class="bg-white/10 backdrop-blur rounded-xl p-6 border border-white/20">
-                <h3 class="text-white font-bold mb-4">প্যাকেজ মূল্য সেটিংস</h3>
-                <div id="packagesSettings" class="space-y-3"></div>
-                <button onclick="updatePackagePrices()" class="mt-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:from-green-600 hover:to-teal-600 transition">সেভ পরিবর্তন</button>
-            </div>
-        </div>
+        <div id="settingsSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">সেটিংস</h1><div class="bg-white/10 backdrop-blur rounded-xl p-6 border border-white/20"><h3 class="text-white font-bold mb-4">প্যাকেজ মূল্য সেটিংস</h3><div id="packagesSettings" class="space-y-3"></div><button onclick="updatePackagePrices()" class="mt-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:from-green-600 hover:to-teal-600 transition">সেভ পরিবর্তন</button></div></div>
     </main>
 
     <!-- Modal for Balance Add -->
@@ -223,14 +176,63 @@
         async function approvePackage(id) { const res = await fetch('/admin/approve-package', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ requestId: id }) }); if (res.ok) { alert('প্যাকেজ অ্যাপ্রুভ করা হয়েছে!'); loadPackageRequests(); loadDashboard(); } else alert('Error!'); }
         async function rejectPackage(id) { alert('রিজেক্ট ফাংশন তৈরি করা হবে'); }
 
+        // উত্তোলন রিকোয়েস্ট লোড ও প্রসেস
         async function loadWithdrawals() {
             const res = await fetch('/admin/pending-withdrawals', { headers: { 'Authorization': `Bearer ${token}` } });
             const withdrawals = await res.json();
             document.getElementById('withdrawCount').innerText = withdrawals.length;
-            document.getElementById('withdrawalsList').innerHTML = withdrawals.length === 0 ? '<div class="text-center text-gray-400 py-8">কোনো পেন্ডিং উত্তোলন নেই</div>' : withdrawals.map(w => `<div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20"><div><p class="text-white font-bold">${w.username}</p><p class="text-gray-400 text-sm">টাকা: ${w.amount} (প্রাপ্ত: ${w.net_amount} + ফি: ${w.fee})</p><p class="text-gray-400 text-sm">একাউন্ট: ${w.account_name} (${w.account_number})</p></div><button onclick="processWithdraw(${w.id})" class="mt-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition">প্রসেস করুন</button></div>`).join('');
+            if (withdrawals.length === 0) {
+                document.getElementById('withdrawalsList').innerHTML = '<div class="text-center text-gray-400 py-8">কোনো পেন্ডিং উত্তোলন নেই</div>';
+            } else {
+                document.getElementById('withdrawalsList').innerHTML = withdrawals.map(w => `
+                    <div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
+                        <div>
+                            <p class="text-white font-bold">${w.username}</p>
+                            <p class="text-gray-400 text-sm">আবেদনকৃত টাকা: ${w.amount} টাকা</p>
+                            <p class="text-gray-400 text-sm">প্রাপ্ত টাকা (ফি বাদে): ${w.net_amount} টাকা</p>
+                            <p class="text-gray-400 text-sm">একাউন্ট: ${w.account_name || 'N/A'} (${w.account_number || 'N/A'})</p>
+                            <p class="text-gray-400 text-sm">মোবাইল: ${w.mobile}</p>
+                            <p class="text-gray-400 text-sm">আবেদনের সময়: ${new Date(w.requested_at).toLocaleString()}</p>
+                        </div>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="processWithdraw(${w.id})" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">অ্যাপ্রুভ ও টাকা পাঠান</button>
+                            <button onclick="rejectWithdraw(${w.id})" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">রিজেক্ট ও টাকা ফেরত</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
         }
 
-        async function processWithdraw(id) { const res = await fetch('/admin/process-withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ withdrawalId: id }) }); if (res.ok) { alert('উত্তোলন প্রসেস করা হয়েছে!'); loadWithdrawals(); loadDashboard(); } else alert('Error!'); }
+        async function processWithdraw(withdrawalId) {
+            const res = await fetch('/admin/process-withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ withdrawalId })
+            });
+            if (res.ok) {
+                alert('উত্তোলন অ্যাপ্রুভ করা হয়েছে এবং টাকা পাঠানো হবে!');
+                loadWithdrawals();
+                loadDashboard();
+            } else {
+                alert('Error!');
+            }
+        }
+
+        async function rejectWithdraw(withdrawalId) {
+            const reason = prompt('রিজেক্ট করার কারণ লিখুন (ঐচ্ছিক):');
+            const res = await fetch('/admin/reject-withdraw', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ withdrawalId, reason: reason || '' })
+            });
+            if (res.ok) {
+                alert('উত্তোলন রিজেক্ট করা হয়েছে এবং টাকা ফেরত দেওয়া হয়েছে!');
+                loadWithdrawals();
+                loadDashboard();
+            } else {
+                alert('Error!');
+            }
+        }
 
         async function toggleUserStatus(id, currentStatus) { const newStatus = currentStatus === 'active' ? 'blocked' : 'active'; const res = await fetch('/admin/toggle-user-status', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ userId: id, status: newStatus }) }); if (res.ok) loadUsers(); }
 
