@@ -321,6 +321,36 @@
 
         loadUserData();
         loadPackages();
+        async function buyPackage(level, price) {
+    // ফ্রন্টএন্ডের userLevel এর উপর নির্ভর না করে সরাসরি API কল করুন
+    const res = await fetch('/api/buy-package', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ level })
+    });
+    
+    const data = await res.json();
+    
+    if (data.success) {
+        showSuccessModal(data.message);
+        loadUserData();
+        setTimeout(() => location.reload(), 2000);
+    } else if (data.needBalance) {
+        // ব্যালেন্স কম - পেমেন্ট মডাল দেখান
+        currentPackage = { level, price, needAmount: data.needAmount };
+        document.getElementById('modalPackageLevel').innerText = level;
+        document.getElementById('modalPackagePrice').innerText = price;
+        document.getElementById('modalUserBalance').innerText = userBalance;
+        document.getElementById('modalNeedAmount').innerText = data.needAmount;
+        document.getElementById('paymentMethod').value = '';
+        document.getElementById('transactionId').value = '';
+        document.getElementById('paymentInstructions').classList.add('hidden');
+        document.getElementById('paymentModal').style.display = 'flex';
+        document.getElementById('paymentModal').classList.remove('hidden');
+    } else {
+        alert(data.error || 'দুঃখিত, সমস্যা হয়েছে');
+    }
+}
     </script>
 </body>
 </html>

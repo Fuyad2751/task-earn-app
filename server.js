@@ -937,3 +937,57 @@ async function distributeTaskCommission(userId, taskReward, taskLevel) {
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.post('/api/buy-package', authenticate, async (req, res) => {
+  const { level } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    
+    if (user.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const userLevel = user.rows[0].level;
+    
+    // 🔥 সঠিক চেক: ইউজার যদি ইতিমধ্যে এই লেভেলের উপরে থাকে (সমান হলে নয়)
+    if (userLevel > level) {
+      return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন!` });
+    }
+    
+    // যদি ইউজার ইতিমধ্যে এই লেভেলে থাকে, তাহলে আপগ্রেডের দরকার নেই
+    if (userLevel === level) {
+      return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${level} এ আছেন!` });
+    }
+    
+    const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
+    const packagePrice = pkg.rows[0].price;
+    const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    
+    if (userBalance >= packagePrice) {
+      await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
+      await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
+      await distributePackageCommission(userId, level, packagePrice);
+      
+      res.json({ 
+        success: true, 
+        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!`,
+        autoApproved: true
+      });
+    } else {
+      const needAmount = packagePrice - userBalance;
+      res.json({ 
+        success: false, 
+        needBalance: true,
+        needAmount: needAmount,
+        packagePrice: packagePrice,
+        userBalance: userBalance,
+        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা পেমেন্ট করুন।`
+      });
+    }
+    
+  } catch (err) {
+    console.error('Package buy error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
