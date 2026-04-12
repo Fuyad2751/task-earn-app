@@ -151,6 +151,61 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     console.error('Tasks API error:', err);
     res.status(500).json({ error: err.message });
   }
+});// ============ টাস্ক API - শুধু বর্তমান লেভেলের টাস্ক দেখাবে ============
+app.get('/api/my-tasks', authenticate, async (req, res) => {
+  const userId = req.user.id;
+  
+  try {
+    const user = await pool.query('SELECT level FROM users WHERE id = $1', [userId]);
+    const userLevel = user.rows[0].level;
+    
+    if (userLevel === 1) {
+      const hasPackage = await pool.query(
+        'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
+        [userId, 'approved']
+      );
+      
+      if (hasPackage.rows.length === 0) {
+        return res.json({ 
+          noPackage: true, 
+          message: 'টাস্ক শুরু করতে লেভেল 1 প্যাকেজ কিনুন!',
+          packagePrice: 500
+        });
+      }
+    }
+    
+    const tasks = await pool.query(
+      `SELECT t.*, lp.task_rate 
+       FROM tasks t 
+       JOIN level_packages lp ON t.level = lp.level 
+       WHERE t.level = $1 
+       ORDER BY t.id`,
+      [userLevel]
+    );
+    
+    const today = new Date().toISOString().slice(0, 10);
+    const completed = await pool.query(
+      'SELECT task_id FROM user_daily_tasks WHERE user_id = $1 AND completed_date = $2',
+      [userId, today]
+    );
+    const completedIds = completed.rows.map(r => r.task_id);
+    
+    // প্রতিটি টাস্কের জন্য ডিফল্ট ভিডিও ও প্রশ্ন যোগ করুন
+    const tasksWithData = tasks.rows.map(t => ({
+      ...t,
+      completed: completedIds.includes(t.id),
+      task_rate: parseFloat(t.task_rate),
+      video_url: t.video_url || 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      question: t.question || 'ভিডিওটি সম্পর্কে আপনার মতামত কী?',
+      options: t.options || ['ভিডিওটি ভালো ছিল', 'ভিডিওটি তথ্যমূলক ছিল', 'ভিডিওটি দরকারী ছিল', 'ভিডিওটি চমৎকার ছিল']
+    }));
+    
+    res.json(tasksWithData);
+    
+  } catch (err) {
+    console.error('Tasks API error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ============ টাস্ক কমপ্লিট API ============
