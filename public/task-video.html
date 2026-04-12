@@ -21,6 +21,9 @@
             width: 100%;
             height: 100%;
         }
+        .timer-circle {
+            transition: stroke-dashoffset 0.1s linear;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
@@ -36,6 +39,7 @@
     </header>
 
     <div class="container mx-auto px-4 py-6 max-w-3xl">
+        <!-- No Package Card -->
         <div id="noPackageCard" class="hidden bg-gradient-to-br from-red-500/20 to-orange-600/20 rounded-2xl p-8 text-center border border-red-500/30 backdrop-blur">
             <div class="bg-red-500/30 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4"><i class="fas fa-lock text-4xl text-red-400"></i></div>
             <h2 class="text-2xl font-bold text-white mb-2">প্যাকেজ প্রয়োজন!</h2>
@@ -46,16 +50,43 @@
             </div>
         </div>
 
+        <!-- Task Content -->
         <div id="taskContent" class="hidden">
             <div class="bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20 shadow-xl">
-                <div class="mb-6"><div class="flex justify-between text-sm text-white/70 mb-2"><span><i class="fas fa-chart-line mr-1"></i> টাস্ক অগ্রগতি</span><span id="progressPercent">০%</span></div><div class="w-full bg-white/20 rounded-full h-3"><div id="progressBar" class="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div></div></div>
+                <!-- Progress Bar -->
+                <div class="mb-6">
+                    <div class="flex justify-between text-sm text-white/70 mb-2">
+                        <span><i class="fas fa-chart-line mr-1"></i> টাস্ক অগ্রগতি</span>
+                        <span id="progressPercent">০%</span>
+                    </div>
+                    <div class="w-full bg-white/20 rounded-full h-3">
+                        <div id="progressBar" class="bg-gradient-to-r from-yellow-400 to-orange-500 h-3 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Task Title -->
                 <h2 id="taskTitle" class="text-2xl font-bold text-white mb-2">লোড হচ্ছে...</h2>
                 <p id="taskDesc" class="text-white/70 mb-6">অনুগ্রহ করে ভিডিওটি মনোযোগ দিয়ে দেখুন</p>
-                
+
+                <!-- Timer -->
+                <div class="flex justify-center mb-4">
+                    <div class="relative w-20 h-20">
+                        <svg class="w-full h-full transform -rotate-90">
+                            <circle cx="40" cy="40" r="35" stroke="rgba(255,255,255,0.2)" stroke-width="4" fill="none"/>
+                            <circle id="timerCircle" cx="40" cy="40" r="35" stroke="#fbbf24" stroke-width="4" fill="none" stroke-dasharray="219.8" stroke-dashoffset="0"/>
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center">
+                            <span id="timerText" class="text-white text-xl font-bold">30</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Video Container -->
                 <div class="video-container mb-6">
                     <iframe id="videoFrame" src="" frameborder="0" allowfullscreen></iframe>
                 </div>
 
+                <!-- Question Section -->
                 <div id="questionSection" class="hidden">
                     <div class="bg-white/5 rounded-xl p-5 mb-6 border border-white/10">
                         <h3 class="text-xl font-bold text-yellow-400 mb-3"><i class="fas fa-question-circle mr-2"></i> ভিডিও সম্পর্কিত প্রশ্ন</h3>
@@ -64,12 +95,18 @@
                     </div>
                 </div>
 
+                <!-- Message Area -->
                 <div id="messageArea" class="hidden rounded-xl p-4 mb-4"></div>
-                <button id="nextTaskBtn" onclick="nextTask()" class="hidden w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-teal-600 transition shadow-lg"><i class="fas fa-arrow-right mr-2"></i> পরবর্তী টাস্ক</button>
+
+                <!-- Next Task Button -->
+                <button id="nextTaskBtn" onclick="nextTask()" class="hidden w-full bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-3 rounded-xl hover:from-green-600 hover:to-teal-600 transition shadow-lg">
+                    <i class="fas fa-arrow-right mr-2"></i> পরবর্তী টাস্ক
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
         <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400"><i class="fas fa-home text-xl"></i><span class="text-xs">হোম</span></a>
         <a href="task-video.html" class="flex flex-col items-center text-yellow-400"><i class="fas fa-play-circle text-xl"></i><span class="text-xs">টাস্ক</span></a>
@@ -85,7 +122,19 @@
         let tasks = [];
         let currentTaskIndex = 0;
         let completedTasks = [];
+        let timerInterval = null;
+        let timeLeft = 30;
 
+        // লোড ইউজার পয়েন্টস
+        async function loadUserPoints() {
+            const res = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const data = await res.json();
+                document.getElementById('userPoints').innerText = data.balance || 0;
+            }
+        }
+
+        // প্যাকেজ চেক
         async function checkPackage() {
             const res = await fetch('/api/can-do-task', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
@@ -102,6 +151,7 @@
             return true;
         }
 
+        // টাস্ক লোড
         async function loadTasks() {
             const res = await fetch('/api/my-tasks', { headers: { 'Authorization': `Bearer ${token}` } });
             const data = await res.json();
@@ -113,31 +163,60 @@
             tasks = data;
             loadCompletedTasks();
             updateProgress();
-            if (tasks.length > 0) loadTask();
+            if (tasks.length > 0) {
+                loadTask();
+            }
         }
 
+        // কমপ্লিটেড টাস্ক লোড
         function loadCompletedTasks() {
             const saved = localStorage.getItem('completedTasks');
             completedTasks = saved ? JSON.parse(saved) : [];
             currentTaskIndex = completedTasks.length;
         }
 
+        // সেভ কমপ্লিটেড টাস্ক
         function saveCompletedTasks() {
             localStorage.setItem('completedTasks', JSON.stringify(completedTasks));
         }
 
+        // অগ্রগতি আপডেট
         function updateProgress() {
-            const percent = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
+            const total = tasks.length;
+            const completed = completedTasks.length;
+            const percent = total > 0 ? (completed / total) * 100 : 0;
             document.getElementById('progressBar').style.width = percent + '%';
             document.getElementById('progressPercent').innerText = Math.round(percent) + '%';
         }
 
+        // টাইমার শুরু
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timeLeft = 30;
+            const circle = document.getElementById('timerCircle');
+            const circumference = 219.8;
+            
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timerText').innerText = timeLeft;
+                const offset = circumference - (timeLeft / 30) * circumference;
+                circle.style.strokeDashoffset = offset;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    showQuestion();
+                }
+            }, 1000);
+        }
+
+        // টাস্ক লোড
         function loadTask() {
             if (currentTaskIndex >= tasks.length) {
                 document.getElementById('taskTitle').innerHTML = '<i class="fas fa-trophy text-yellow-400 mr-2"></i> অভিনন্দন!';
                 document.getElementById('taskDesc').innerHTML = 'আপনি সব টাস্ক সফলভাবে সম্পন্ন করেছেন!';
                 document.querySelector('.video-container').classList.add('hidden');
                 document.getElementById('questionSection').classList.add('hidden');
+                document.getElementById('nextTaskBtn').classList.add('hidden');
                 return;
             }
             
@@ -145,22 +224,26 @@
             document.getElementById('taskTitle').innerHTML = `<i class="fas fa-play-circle mr-2"></i> ${task.title}`;
             document.getElementById('taskDesc').innerHTML = task.description;
             
-            // ভিডিও URL সেট করুন (default YouTube ভিডিও)
+            // ভিডিও URL সেট করুন
             const videoUrl = task.video_url || 'https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=0&rel=0';
             document.getElementById('videoFrame').src = videoUrl;
             
             document.getElementById('questionSection').classList.add('hidden');
             document.getElementById('nextTaskBtn').classList.add('hidden');
+            document.getElementById('messageArea').classList.add('hidden');
             
-            // 30 সেকেন্ড পর প্রশ্ন দেখান
-            setTimeout(() => showQuestion(), 30000);
+            // টাইমার শুরু করুন
+            startTimer();
         }
 
+        // প্রশ্ন দেখান
         function showQuestion() {
             const task = tasks[currentTaskIndex];
             document.getElementById('questionText').innerHTML = task.question || 'ভিডিওটি সম্পর্কে আপনার মতামত কী?';
+            
             const optionsContainer = document.getElementById('optionsContainer');
             optionsContainer.innerHTML = '';
+            
             const options = task.options || ['ভিডিওটি ভালো ছিল', 'ভিডিওটি তথ্যমূলক ছিল', 'ভিডিওটি দরকারী ছিল', 'ভিডিওটি চমৎকার ছিল'];
             options.forEach((option, index) => {
                 const btn = document.createElement('button');
@@ -169,9 +252,11 @@
                 btn.onclick = () => checkAnswer(index);
                 optionsContainer.appendChild(btn);
             });
+            
             document.getElementById('questionSection').classList.remove('hidden');
         }
 
+        // উত্তর চেক
         async function checkAnswer(selectedIndex) {
             const task = tasks[currentTaskIndex];
             const messageArea = document.getElementById('messageArea');
@@ -190,6 +275,7 @@
             document.getElementById('questionSection').classList.add('hidden');
         }
 
+        // পয়েন্ট যোগ
         async function addPoints(amount) {
             const res = await fetch('/api/complete-task', {
                 method: 'POST',
@@ -197,18 +283,19 @@
                 body: JSON.stringify({ taskId: tasks[currentTaskIndex].id })
             });
             if (res.ok) {
-                const pointsRes = await fetch('/api/profile', { headers: { 'Authorization': `Bearer ${token}` } });
-                const data = await pointsRes.json();
-                document.getElementById('userPoints').innerText = data.balance || 0;
+                await loadUserPoints();
             }
         }
 
+        // পরবর্তী টাস্ক
         function nextTask() {
             currentTaskIndex++;
             document.getElementById('messageArea').classList.add('hidden');
             loadTask();
         }
 
+        // শুরু করুন
+        loadUserPoints();
         checkPackage();
     </script>
 </body>
