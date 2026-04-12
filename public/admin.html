@@ -62,6 +62,10 @@
                 <i class="fas fa-user-check w-5"></i><span>উত্তোলন একাউন্ট</span>
                 <span id="withdrawAccCount" class="ml-auto bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
+            <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showPackagePayments()">
+                <i class="fas fa-credit-card w-5"></i><span>প্যাকেজ পেমেন্ট</span>
+                <span id="packagePaymentCount" class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
+            </div>
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showSettings()">
                 <i class="fas fa-cog w-5"></i><span>সেটিংস</span>
             </div>
@@ -113,6 +117,9 @@
         <!-- Withdrawal Accounts Section -->
         <div id="withdrawalAccountsSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">উত্তোলন একাউন্ট ভেরিফিকেশন</h1><div id="withdrawalAccountsList" class="space-y-3"></div></div>
 
+        <!-- Package Payments Section -->
+        <div id="packagePaymentsSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">প্যাকেজ পেমেন্ট রিকোয়েস্ট</h1><div id="packagePaymentsList" class="space-y-3"></div></div>
+
         <!-- Settings Section -->
         <div id="settingsSection" class="section hidden"><h1 class="text-2xl md:text-3xl font-bold text-white mb-6">সেটিংস</h1><div class="bg-white/10 backdrop-blur rounded-xl p-6 border border-white/20"><h3 class="text-white font-bold mb-4">প্যাকেজ মূল্য সেটিংস</h3><div id="packagesSettings" class="space-y-3"></div><button onclick="updatePackagePrices()" class="mt-4 bg-gradient-to-r from-green-500 to-teal-500 text-white font-bold py-2 px-6 rounded-lg hover:from-green-600 hover:to-teal-600 transition">সেভ পরিবর্তন</button></div></div>
     </main>
@@ -136,13 +143,16 @@
         let earningsChart = null;
 
         function logout() { localStorage.removeItem('authToken'); window.location.href = 'index.html'; }
+        
         function showDashboard() { showSection('dashboardSection'); loadDashboard(); }
         function showUsers() { showSection('usersSection'); loadUsers(); }
         function showPackages() { showSection('packagesSection'); loadPackageRequests(); }
         function showWithdrawals() { showSection('withdrawalsSection'); loadWithdrawals(); }
         function showBalanceRequests() { showSection('balanceRequestsSection'); loadBalanceRequests(); }
         function showWithdrawalAccounts() { showSection('withdrawalAccountsSection'); loadWithdrawalAccounts(); }
+        function showPackagePayments() { showSection('packagePaymentsSection'); loadPackagePaymentRequests(); }
         function showSettings() { showSection('settingsSection'); loadSettings(); }
+        
         function showSection(sectionId) { document.querySelectorAll('.section').forEach(s => s.classList.add('hidden')); document.getElementById(sectionId).classList.remove('hidden'); }
 
         async function loadDashboard() {
@@ -176,7 +186,6 @@
         async function approvePackage(id) { const res = await fetch('/admin/approve-package', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ requestId: id }) }); if (res.ok) { alert('প্যাকেজ অ্যাপ্রুভ করা হয়েছে!'); loadPackageRequests(); loadDashboard(); } else alert('Error!'); }
         async function rejectPackage(id) { alert('রিজেক্ট ফাংশন তৈরি করা হবে'); }
 
-        // উত্তোলন রিকোয়েস্ট লোড ও প্রসেস
         async function loadWithdrawals() {
             const res = await fetch('/admin/pending-withdrawals', { headers: { 'Authorization': `Bearer ${token}` } });
             const withdrawals = await res.json();
@@ -184,55 +193,12 @@
             if (withdrawals.length === 0) {
                 document.getElementById('withdrawalsList').innerHTML = '<div class="text-center text-gray-400 py-8">কোনো পেন্ডিং উত্তোলন নেই</div>';
             } else {
-                document.getElementById('withdrawalsList').innerHTML = withdrawals.map(w => `
-                    <div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20">
-                        <div>
-                            <p class="text-white font-bold">${w.username}</p>
-                            <p class="text-gray-400 text-sm">আবেদনকৃত টাকা: ${w.amount} টাকা</p>
-                            <p class="text-gray-400 text-sm">প্রাপ্ত টাকা (ফি বাদে): ${w.net_amount} টাকা</p>
-                            <p class="text-gray-400 text-sm">একাউন্ট: ${w.account_name || 'N/A'} (${w.account_number || 'N/A'})</p>
-                            <p class="text-gray-400 text-sm">মোবাইল: ${w.mobile}</p>
-                            <p class="text-gray-400 text-sm">আবেদনের সময়: ${new Date(w.requested_at).toLocaleString()}</p>
-                        </div>
-                        <div class="flex gap-2 mt-3">
-                            <button onclick="processWithdraw(${w.id})" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition">অ্যাপ্রুভ ও টাকা পাঠান</button>
-                            <button onclick="rejectWithdraw(${w.id})" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">রিজেক্ট ও টাকা ফেরত</button>
-                        </div>
-                    </div>
-                `).join('');
+                document.getElementById('withdrawalsList').innerHTML = withdrawals.map(w => `<div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20"><div><p class="text-white font-bold">${w.username}</p><p class="text-gray-400 text-sm">টাকা: ${w.amount} (প্রাপ্ত: ${w.net_amount})</p><p class="text-gray-400 text-sm">একাউন্ট: ${w.account_name || 'N/A'} (${w.account_number || 'N/A'})</p><div class="flex gap-2 mt-2"><button onclick="processWithdraw(${w.id})" class="bg-green-600 text-white px-4 py-2 rounded-lg">অ্যাপ্রুভ</button><button onclick="rejectWithdraw(${w.id})" class="bg-red-600 text-white px-4 py-2 rounded-lg">রিজেক্ট</button></div></div></div>`).join('');
             }
         }
 
-        async function processWithdraw(withdrawalId) {
-            const res = await fetch('/admin/process-withdraw', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ withdrawalId })
-            });
-            if (res.ok) {
-                alert('উত্তোলন অ্যাপ্রুভ করা হয়েছে এবং টাকা পাঠানো হবে!');
-                loadWithdrawals();
-                loadDashboard();
-            } else {
-                alert('Error!');
-            }
-        }
-
-        async function rejectWithdraw(withdrawalId) {
-            const reason = prompt('রিজেক্ট করার কারণ লিখুন (ঐচ্ছিক):');
-            const res = await fetch('/admin/reject-withdraw', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ withdrawalId, reason: reason || '' })
-            });
-            if (res.ok) {
-                alert('উত্তোলন রিজেক্ট করা হয়েছে এবং টাকা ফেরত দেওয়া হয়েছে!');
-                loadWithdrawals();
-                loadDashboard();
-            } else {
-                alert('Error!');
-            }
-        }
+        async function processWithdraw(id) { const res = await fetch('/admin/process-withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ withdrawalId: id }) }); if (res.ok) { alert('উত্তোলন অ্যাপ্রুভ করা হয়েছে!'); loadWithdrawals(); loadDashboard(); } else alert('Error!'); }
+        async function rejectWithdraw(id) { const res = await fetch('/admin/reject-withdraw', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ withdrawalId: id }) }); if (res.ok) { alert('উত্তোলন রিজেক্ট করা হয়েছে!'); loadWithdrawals(); loadDashboard(); } else alert('Error!'); }
 
         async function toggleUserStatus(id, currentStatus) { const newStatus = currentStatus === 'active' ? 'blocked' : 'active'; const res = await fetch('/admin/toggle-user-status', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ userId: id, status: newStatus }) }); if (res.ok) loadUsers(); }
 
@@ -261,12 +227,36 @@
 
         async function verifyWithdrawalAccount(accountId) { const res = await fetch('/admin/verify-withdrawal-account', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, body: JSON.stringify({ accountId }) }); if (res.ok) { alert('একাউন্ট ভেরিফাই করা হয়েছে!'); loadWithdrawalAccounts(); } else alert('Error!'); }
 
+        async function loadPackagePaymentRequests() {
+            const res = await fetch('/admin/pending-package-payments', { headers: { 'Authorization': `Bearer ${token}` } });
+            const requests = await res.json();
+            document.getElementById('packagePaymentCount').innerText = requests.length;
+            if (requests.length === 0) { document.getElementById('packagePaymentsList').innerHTML = '<div class="text-center text-gray-400 py-8">কোনো পেন্ডিং পেমেন্ট নেই</div>'; }
+            else { document.getElementById('packagePaymentsList').innerHTML = requests.map(r => `<div class="bg-white/10 backdrop-blur rounded-xl p-4 border border-white/20"><div><p class="text-white font-bold">${r.username}</p><p class="text-gray-300 text-sm">লেভেল ${r.level} | টাকা: ${r.amount}</p><p class="text-gray-300 text-sm">TxID: ${r.transaction_id} | ${r.payment_method}</p><p class="text-gray-300 text-sm">মোবাইল: ${r.mobile}</p><button onclick="approvePackagePayment(${r.id}, ${r.amount})" class="mt-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700">অ্যাপ্রুভ করুন</button></div></div>`).join(''); }
+        }
+
+        async function approvePackagePayment(requestId, amount) {
+            const res = await fetch('/admin/approve-package-payment', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ requestId })
+            });
+            if (res.ok) {
+                alert(`${amount} টাকা ইউজারের একাউন্টে যোগ করা হয়েছে!`);
+                loadPackagePaymentRequests();
+                loadDashboard();
+                loadUsers();
+            } else {
+                alert('Error!');
+            }
+        }
+
         async function loadSettings() { const res = await fetch('/api/packages'); const packages = await res.json(); document.getElementById('packagesSettings').innerHTML = packages.map(p => `<div class="flex flex-wrap gap-3 items-center justify-between bg-white/5 rounded-lg p-3"><span class="text-white font-medium w-24">লেভেল ${p.level}</span><input type="number" id="price_${p.level}" value="${p.price}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="মূল্য"><input type="number" id="taskRate_${p.level}" value="${p.task_rate}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="টাস্ক রেট"><input type="number" id="minWithdraw_${p.level}" value="${p.min_withdraw}" class="px-3 py-1 rounded bg-white/10 border border-white/20 text-white w-32" placeholder="ন্যূনতম উত্তোলন"></div>`).join(''); }
         async function updatePackagePrices() { alert('প্যাকেজ আপডেট ফাংশন তৈরি করা হবে'); }
 
         document.getElementById('menuBtn')?.addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('translate-x-0'); });
         showDashboard();
-        setInterval(() => { loadPackageRequests(); loadWithdrawals(); loadBalanceRequests(); loadWithdrawalAccounts(); }, 30000);
+        setInterval(() => { loadPackageRequests(); loadWithdrawals(); loadBalanceRequests(); loadWithdrawalAccounts(); loadPackagePaymentRequests(); }, 30000);
     </script>
 </body>
 </html>

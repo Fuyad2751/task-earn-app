@@ -271,6 +271,7 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
     const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
     
     if (userBalance >= packagePrice) {
+      // ✅ ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
       await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
       await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
       await distributePackageCommission(userId, level, packagePrice);
@@ -281,12 +282,15 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
         autoApproved: true
       });
     } else {
+      // ❌ ব্যালেন্স কম - পেমেন্ট অপশন দেখান
       const needAmount = packagePrice - userBalance;
       res.json({ 
         success: false, 
         needBalance: true,
         needAmount: needAmount,
-        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা যোগ করতে ব্যালেন্স রিকোয়েস্ট করুন।`
+        packagePrice: packagePrice,
+        userBalance: userBalance,
+        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা পেমেন্ট করুন।`
       });
     }
     
@@ -296,22 +300,78 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
   }
 });
 
-// ============ প্যাকেজ ক্রয় রিকোয়েস্ট API (ম্যানুয়াল) ============
-app.post('/api/request-package', authenticate, upload.single('screenshot'), async (req, res) => {
-  const { level, transactionId } = req.body;
+// ============ প্যাকেজ পেমেন্ট রিকোয়েস্ট API ============
+app.post('/api/request-package-payment', authenticate, async (req, res) => {
+  const { level, amount, transactionId, paymentMethod } = req.body;
   const userId = req.user.id;
-  const user = await pool.query('SELECT level FROM users WHERE id=$1', [userId]);
-  if (user.rows[0].level >= parseInt(level)) return res.status(400).json({ error: 'You already have this level or higher' });
   
-  const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
-  const amount = pkg.rows[0].price;
-  const screenshotPath = req.file ? `/uploads/${req.file.filename}` : null;
+  try {
+    if (!transactionId) {
+      return res.status(400).json({ error: 'ট্রানজাকশন আইডি দিন!' });
+    }
+    
+    // পেমেন্ট রিকোয়েস্ট সেভ করুন
+    await pool.query(
+      `INSERT INTO package_payment_requests (user_id, level, amount, transaction_id, payment_method, status, requested_at) 
+       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())`,
+      [userId, level, amount, transactionId, paymentMethod || 'mobile_banking']
+    );
+    
+    res.json({ success: true, message: 'পেমেন্ট রিকোয়েস্ট জমা হয়েছে। অ্যাডমিন যাচাই করে ব্যালেন্স যোগ করবেন।' });
+    
+  } catch (err) {
+    console.error('Package payment request error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ অ্যাডমিন: পেন্ডিং প্যাকেজ পেমেন্ট রিকোয়েস্ট দেখুন ============
+app.get('/admin/pending-package-payments', authenticate, isAdmin, async (req, res) => {
+  try {
+    const requests = await pool.query(`
+      SELECT ppr.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
+      FROM package_payment_requests ppr
+      JOIN users u ON u.id = ppr.user_id
+      WHERE ppr.status = 'pending'
+      ORDER BY ppr.requested_at ASC
+    `);
+    res.json(requests.rows);
+  } catch (err) {
+    console.error('Pending package payments error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============ অ্যাডমিন: প্যাকেজ পেমেন্ট অ্যাপ্রুভ করুন ============
+app.post('/admin/approve-package-payment', authenticate, isAdmin, async (req, res) => {
+  const { requestId } = req.body;
   
-  await pool.query(
-    'INSERT INTO purchase_requests (user_id, level, amount, transaction_id, screenshot, status) VALUES ($1,$2,$3,$4,$5, $6)',
-    [userId, level, amount, transactionId, screenshotPath, 'pending']
-  );
-  res.json({ success: true, message: 'Request submitted. Admin will verify.' });
+  try {
+    const request = await pool.query(
+      'SELECT user_id, level, amount FROM package_payment_requests WHERE id = $1 AND status = $2',
+      [requestId, 'pending']
+    );
+    if (request.rows.length === 0) {
+      return res.status(404).json({ error: 'রিকোয়েস্ট পাওয়া যায়নি' });
+    }
+    
+    const { user_id, level, amount } = request.rows[0];
+    
+    // ইউজারের ব্যালেন্স আপডেট করুন
+    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, user_id]);
+    
+    // রিকোয়েস্ট স্ট্যাটাস আপডেট করুন
+    await pool.query(
+      'UPDATE package_payment_requests SET status = $1, processed_at = NOW() WHERE id = $2',
+      ['approved', requestId]
+    );
+    
+    res.json({ success: true, message: 'পেমেন্ট অ্যাপ্রুভ করা হয়েছে এবং ব্যালেন্স যোগ করা হয়েছে!' });
+    
+  } catch (err) {
+    console.error('Approve package payment error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ============ প্রোফাইল API ============
