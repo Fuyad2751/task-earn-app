@@ -7,187 +7,134 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <style>
-        .setting-card {
-            transition: all 0.3s ease;
-        }
-        .setting-card:hover {
-            transform: translateY(-2px);
-        }
+        .setting-card { transition: all 0.3s ease; }
+        .setting-card:hover { transform: translateY(-2px); }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
 
-    <!-- Header -->
     <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center gap-2">
-                <i class="fas fa-sliders-h text-2xl"></i>
-                <span class="text-xl font-bold">অ্যাডমিন কন্ট্রোল প্যানেল</span>
-            </div>
+            <div class="flex items-center gap-2"><i class="fas fa-sliders-h text-2xl"></i><span class="text-xl font-bold">অ্যাডমিন কন্ট্রোল প্যানেল</span></div>
             <div class="flex gap-3">
-                <a href="admin.html" class="text-white/80 hover:text-white transition">
-                    <i class="fas fa-arrow-left mr-1"></i> প্যানেলে ফিরুন
-                </a>
-                <button onclick="logout()" class="text-white/80 hover:text-white transition">
-                    <i class="fas fa-sign-out-alt mr-1"></i> লগআউট
-                </button>
+                <a href="admin.html" class="text-white/80 hover:text-white transition"><i class="fas fa-arrow-left mr-1"></i> প্যানেলে ফিরুন</a>
+                <button onclick="logout()" class="text-white/80 hover:text-white transition"><i class="fas fa-sign-out-alt mr-1"></i> লগআউট</button>
             </div>
         </div>
     </header>
 
-    <div class="container mx-auto px-4 py-6 max-w-5xl">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
         
         <!-- সাইট সেটিংস -->
         <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
-            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
-                <i class="fas fa-globe mr-2 text-yellow-400"></i> সাইট সেটিংস
-            </h2>
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-globe mr-2 text-yellow-400"></i> সাইট সেটিংস</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-gray-300 mb-2">সাইটের নাম</label>
-                    <input type="text" id="siteName" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                </div>
-                <div>
-                    <label class="block text-gray-300 mb-2">থিম কালার (হেডার)</label>
-                    <div class="flex items-center gap-2">
-                        <input type="color" id="themeColor" class="w-12 h-10 rounded-lg bg-white/10 border border-white/20 cursor-pointer">
-                        <input type="text" id="themeColorHex" class="flex-1 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-gray-300 mb-2">উত্তোলন ফি (%)</label>
-                    <input type="number" id="withdrawFee" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                </div>
-                <div>
-                    <label class="block text-gray-300 mb-2">ন্যূনতম উত্তোলন (ডিফল্ট)</label>
-                    <input type="number" id="defaultMinWithdraw" step="50" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
-                </div>
+                <div><label class="block text-gray-300 mb-2">সাইটের নাম</label><input type="text" id="siteName" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"></div>
+                <div><label class="block text-gray-300 mb-2">থিম কালার</label><div class="flex items-center gap-2"><input type="color" id="themeColor" class="w-12 h-10 rounded-lg"><input type="text" id="themeColorHex" class="flex-1 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"></div></div>
+                <div><label class="block text-gray-300 mb-2">উত্তোলন ফি (%)</label><input type="number" id="withdrawFee" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"></div>
+                <div><label class="block text-gray-300 mb-2">ন্যূনতম উত্তোলন (ডিফল্ট)</label><input type="number" id="defaultMinWithdraw" step="50" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"></div>
             </div>
-            <div class="mt-4 flex gap-3">
-                <button onclick="updateSiteSettings()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-save mr-2"></i> সাইট সেটিংস সেভ করুন
-                </button>
-                <button onclick="loadSiteSettings()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition">
-                    <i class="fas fa-sync-alt mr-2"></i> রিফ্রেশ
-                </button>
-            </div>
-            <div id="siteSettingsMsg" class="mt-3 text-sm hidden"></div>
+            <div class="mt-4 flex gap-3"><button onclick="updateSiteSettings()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"><i class="fas fa-save mr-2"></i> সেভ করুন</button><button onclick="loadSiteSettings()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition"><i class="fas fa-sync-alt mr-2"></i> রিফ্রেশ</button></div>
         </div>
 
-        <!-- প্যাকেজ ম্যানেজমেন্ট -->
+        <!-- লেভেল ম্যানেজমেন্ট -->
         <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
-            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
-                <i class="fas fa-box mr-2 text-green-400"></i> প্যাকেজ ম্যানেজমেন্ট
-            </h2>
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-layer-group mr-2 text-green-400"></i> লেভেল ম্যানেজমেন্ট</h2>
+            <div class="flex flex-wrap gap-3 mb-4">
+                <div><label class="block text-gray-300 text-sm">নতুন লেভেল নাম্বার</label><input type="number" id="newLevelNumber" class="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-24"></div>
+                <div><label class="block text-gray-300 text-sm">প্যাকেজ মূল্য</label><input type="number" id="newLevelPrice" class="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-32"></div>
+                <div><label class="block text-gray-300 text-sm">দৈনিক টাস্ক</label><input type="number" id="newLevelTasks" class="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-24"></div>
+                <div><label class="block text-gray-300 text-sm">টাস্ক রেট</label><input type="number" id="newLevelRate" class="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-24"></div>
+                <div><label class="block text-gray-300 text-sm">ন্যূনতম উত্তোলন</label><input type="number" id="newLevelMinWithdraw" class="px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-32"></div>
+                <div class="flex items-end"><button onclick="addNewLevel()" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"><i class="fas fa-plus mr-2"></i> লেভেল যোগ করুন</button></div>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-white text-sm">
-                    <thead class="bg-white/20">
-                        <tr>
-                            <th class="px-3 py-2 text-left">লেভেল</th>
-                            <th class="px-3 py-2 text-left">মূল্য (টাকা)</th>
-                            <th class="px-3 py-2 text-left">দৈনিক টাস্ক</th>
-                            <th class="px-3 py-2 text-left">টাস্ক রেট</th>
-                            <th class="px-3 py-2 text-left">ন্যূনতম উত্তোলন</th>
-                            <th class="px-3 py-2 text-left">অ্যাকশন</th>
-                        </tr>
-                    </thead>
+                    <thead class="bg-white/20"><tr><th class="px-3 py-2">লেভেল</th><th class="px-3 py-2">মূল্য</th><th class="px-3 py-2">দৈনিক টাস্ক</th><th class="px-3 py-2">টাস্ক রেট</th><th class="px-3 py-2">ন্যূনতম উত্তোলন</th><th class="px-3 py-2">মেয়াদ (দিন)</th><th class="px-3 py-2">অ্যাকশন</th></tr></thead>
                     <tbody id="packagesList"></tbody>
                 </table>
             </div>
-            <div id="packageMsg" class="mt-3 text-sm hidden"></div>
         </div>
 
-        <!-- রেফারেল কমিশন সেটিংস -->
+        <!-- ইউজার লেভেল পরিবর্তন -->
         <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
-            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
-                <i class="fas fa-users mr-2 text-purple-400"></i> রেফারেল কমিশন হার
-            </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-gray-300 mb-2">১ম জেনারেশন (%)</label>
-                    <input type="number" id="gen1Rate" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
-                    <p class="text-gray-500 text-xs mt-1">প্যাকেজ: 10% | টাস্ক: 5%</p>
-                </div>
-                <div>
-                    <label class="block text-gray-300 mb-2">২য় জেনারেশন (%)</label>
-                    <input type="number" id="gen2Rate" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
-                    <p class="text-gray-500 text-xs mt-1">প্যাকেজ: 5% | টাস্ক: 2%</p>
-                </div>
-                <div>
-                    <label class="block text-gray-300 mb-2">৩য় জেনারেশন (%)</label>
-                    <input type="number" id="gen3Rate" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
-                    <p class="text-gray-500 text-xs mt-1">প্যাকেজ: 2% | টাস্ক: 1%</p>
-                </div>
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-user-edit mr-2 text-purple-400"></i> ইউজার লেভেল পরিবর্তন</h2>
+            <div class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1"><label class="block text-gray-300 text-sm">ইউজার সিলেক্ট করুন</label><select id="userLevelSelect" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"></select></div>
+                <div><label class="block text-gray-300 text-sm">নতুন লেভেল</label><input type="number" id="newUserLevel" class="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-24"></div>
+                <div><button onclick="changeUserLevel()" class="bg-orange-600 text-white px-5 py-2 rounded-lg hover:bg-orange-700"><i class="fas fa-arrow-down mr-2"></i> লেভেল পরিবর্তন করুন</button></div>
             </div>
-            <div class="mt-4 flex gap-3">
-                <button onclick="updateReferralRates()" class="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition">
-                    <i class="fas fa-save mr-2"></i> কমিশন হার সেভ করুন
-                </button>
-                <button onclick="loadReferralRates()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition">
-                    <i class="fas fa-sync-alt mr-2"></i> রিফ্রেশ
-                </button>
+        </div>
+
+        <!-- প্যাকেজ মেয়াদ নির্ধারণ -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-calendar-alt mr-2 text-cyan-400"></i> প্যাকেজ মেয়াদ নির্ধারণ</h2>
+            <div class="flex flex-wrap gap-3 items-end">
+                <div><label class="block text-gray-300 text-sm">লেভেল সিলেক্ট</label><select id="packageExpiryLevel" class="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-32"></select></div>
+                <div><label class="block text-gray-300 text-sm">মেয়াদ (দিন)</label><input type="number" id="packageExpiryDays" class="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-24" placeholder="যেমন: 30"></div>
+                <div><button onclick="setPackageExpiry()" class="bg-cyan-600 text-white px-5 py-2 rounded-lg hover:bg-cyan-700"><i class="fas fa-save mr-2"></i> মেয়াদ নির্ধারণ</button></div>
             </div>
-            <div id="referralMsg" class="mt-3 text-sm hidden"></div>
+            <p class="text-gray-400 text-xs mt-2">* নির্দিষ্ট দিন পর প্যাকেজের মেয়াদ শেষ হবে এবং ইউজার লেভেল 1 এ নেমে যাবে।</p>
+        </div>
+
+        <!-- বিজ্ঞপ্তি প্রেরণ -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-bell mr-2 text-yellow-400"></i> বিজ্ঞপ্তি প্রেরণ</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div><label class="block text-gray-300 text-sm">বিজ্ঞপ্তির শিরোনাম</label><input type="text" id="notificationTitle" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white" placeholder="যেমন: নতুন আপডেট!"></div>
+                <div><label class="block text-gray-300 text-sm">বিজ্ঞপ্তির বার্তা</label><input type="text" id="notificationMessage" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white" placeholder="বিস্তারিত বার্তা"></div>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-3">
+                <button onclick="sendNotificationToAll()" class="bg-yellow-600 text-white px-5 py-2 rounded-lg hover:bg-yellow-700"><i class="fas fa-users mr-2"></i> সবাইকে বিজ্ঞপ্তি দিন</button>
+                <div class="flex gap-2"><select id="singleUserSelect" class="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white w-48"></select><button onclick="sendNotificationToUser()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"><i class="fas fa-user mr-2"></i> নির্দিষ্ট ইউজারকে দিন</button></div>
+            </div>
+            <div id="notificationMsg" class="mt-3 text-sm hidden"></div>
+        </div>
+
+        <!-- ইউজার কার্যক্রম বন্ধ/চালু -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-pause-circle mr-2 text-red-400"></i> ইউজার কার্যক্রম নিয়ন্ত্রণ</h2>
+            <div class="flex flex-wrap gap-3 items-end">
+                <div class="flex-1"><label class="block text-gray-300 text-sm">ইউজার সিলেক্ট করুন</label><select id="blockUserSelect" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"></select></div>
+                <div><button onclick="blockUser()" class="bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700"><i class="fas fa-ban mr-2"></i> টাস্ক বন্ধ করুন</button></div>
+                <div><button onclick="unblockUser()" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700"><i class="fas fa-play mr-2"></i> টাস্ক চালু করুন</button></div>
+                <div><button onclick="blockAllUsers()" class="bg-darkred-700 text-white px-5 py-2 rounded-lg bg-red-800 hover:bg-red-900"><i class="fas fa-stop-circle mr-2"></i> সবাইকে বন্ধ করুন</button></div>
+            </div>
+            <div class="mt-3"><label class="block text-gray-300 text-sm">নির্দিষ্ট দিন বন্ধ রাখুন (সাপ্তাহিক ছুটি)</label><div class="flex gap-2 mt-1"><input type="date" id="blockDate" class="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white"><button onclick="blockOnDate()" class="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700"><i class="fas fa-calendar-week mr-2"></i> এই দিনে বন্ধ রাখুন</button></div></div>
+            <div id="blockMsg" class="mt-3 text-sm hidden"></div>
         </div>
 
         <!-- ফেস ভেরিফিকেশন কন্ট্রোল -->
         <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
-            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
-                <i class="fas fa-face-smile mr-2 text-yellow-400"></i> ফেস ভেরিফিকেশন কন্ট্রোল
-            </h2>
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-face-smile mr-2 text-yellow-400"></i> ফেস ভেরিফিকেশন কন্ট্রোল</h2>
             <div class="flex items-center justify-between flex-wrap gap-4">
-                <div>
-                    <p class="text-white mb-1">নতুন ইউজারদের জন্য ফেস ভেরিফিকেশন</p>
-                    <p class="text-gray-400 text-sm">সক্রিয় থাকলে রেজিস্ট্রেশনের সময় ফেস ভেরিফিকেশন বাধ্যতামূলক হবে</p>
-                </div>
-                <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" id="faceToggle" class="sr-only peer" onchange="toggleFaceVerification()">
-                    <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
-                    <span id="faceToggleText" class="ml-3 text-white">নিষ্ক্রিয়</span>
-                </label>
+                <div><p class="text-white mb-1">নতুন ইউজারদের জন্য ফেস ভেরিফিকেশন</p><p class="text-gray-400 text-sm">সক্রিয় থাকলে রেজিস্ট্রেশনের সময় ফেস ভেরিফিকেশন বাধ্যতামূলক হবে</p></div>
+                <label class="relative inline-flex items-center cursor-pointer"><input type="checkbox" id="faceToggle" class="sr-only peer" onchange="toggleFaceVerification()"><div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div><span id="faceToggleText" class="ml-3 text-white">নিষ্ক্রিয়</span></label>
             </div>
-            <div id="faceMsg" class="mt-3 text-sm hidden"></div>
         </div>
 
         <!-- ইউজার ম্যানেজমেন্ট লিংক -->
         <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
-            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
-                <i class="fas fa-user-cog mr-2 text-blue-400"></i> ইউজার ম্যানেজমেন্ট
-            </h2>
-            <div class="flex flex-wrap gap-3">
-                <a href="admin.html" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition">
-                    <i class="fas fa-users mr-2"></i> সম্পূর্ণ ইউজার ম্যানেজমেন্টে যান
-                </a>
-                <button onclick="location.reload()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition">
-                    <i class="fas fa-sync-alt mr-2"></i> পেজ রিফ্রেশ
-                </button>
-            </div>
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2"><i class="fas fa-user-cog mr-2 text-blue-400"></i> ইউজার ম্যানেজমেন্ট</h2>
+            <div class="flex flex-wrap gap-3"><a href="admin.html" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"><i class="fas fa-users mr-2"></i> সম্পূর্ণ ইউজার ম্যানেজমেন্টে যান</a><button onclick="location.reload()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition"><i class="fas fa-sync-alt mr-2"></i> পেজ রিফ্রেশ</button></div>
         </div>
 
     </div>
 
     <script>
         const token = localStorage.getItem('authToken');
-        if (!token) {
-            window.location.href = 'login.html';
-        }
+        if (!token) window.location.href = 'login.html';
 
-        function logout() {
-            localStorage.removeItem('authToken');
-            window.location.href = 'index.html';
-        }
-
-        function showMessage(elementId, message, isError = false) {
+        function logout() { localStorage.removeItem('authToken'); window.location.href = 'index.html'; }
+        function showMessage(elementId, message, isError) {
             const msgDiv = document.getElementById(elementId);
+            if(!msgDiv) return;
             msgDiv.className = `mt-3 text-sm ${isError ? 'text-red-400' : 'text-green-400'} bg-${isError ? 'red' : 'green'}-500/20 p-2 rounded-lg`;
             msgDiv.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'} mr-2"></i> ${message}`;
             msgDiv.classList.remove('hidden');
-            setTimeout(() => {
-                msgDiv.classList.add('hidden');
-            }, 3000);
+            setTimeout(() => msgDiv.classList.add('hidden'), 5000);
         }
 
-        // সাইট সেটিংস লোড
         async function loadSiteSettings() {
             try {
                 const res = await fetch('/api/site-settings');
@@ -199,149 +146,194 @@
                 document.getElementById('defaultMinWithdraw').value = data.default_min_withdraw || 350;
                 document.getElementById('faceToggle').checked = data.face_verification_enabled || false;
                 document.getElementById('faceToggleText').innerText = data.face_verification_enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়';
-            } catch(e) {
-                console.error('Error loading site settings:', e);
-            }
+            } catch(e) { console.error(e); }
         }
 
-        // সাইট সেটিংস আপডেট
         async function updateSiteSettings() {
-            const site_name = document.getElementById('siteName').value;
-            const theme_color = document.getElementById('themeColor').value;
-            const withdrawal_fee_percent = parseFloat(document.getElementById('withdrawFee').value);
-            const default_min_withdraw = parseFloat(document.getElementById('defaultMinWithdraw').value);
-            
             try {
                 const res = await fetch('/admin/update-site-settings', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ site_name, theme_color, withdrawal_fee_percent, default_min_withdraw })
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ site_name: document.getElementById('siteName').value, theme_color: document.getElementById('themeColor').value, withdrawal_fee_percent: parseFloat(document.getElementById('withdrawFee').value), default_min_withdraw: parseFloat(document.getElementById('defaultMinWithdraw').value) })
                 });
-                if (res.ok) {
-                    showMessage('siteSettingsMsg', 'সাইট সেটিংস সফলভাবে আপডেট করা হয়েছে!');
-                } else {
-                    showMessage('siteSettingsMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
-                }
-            } catch(e) {
-                showMessage('siteSettingsMsg', e.message, true);
-            }
+                if(res.ok) showMessage('siteSettingsMsg', 'সাইট সেটিংস আপডেট করা হয়েছে!', false);
+                else showMessage('siteSettingsMsg', 'আপডেট ব্যর্থ!', true);
+            } catch(e) { showMessage('siteSettingsMsg', e.message, true); }
         }
 
-        // প্যাকেজ লোড
         async function loadPackages() {
             const res = await fetch('/api/packages');
             const packages = await res.json();
             const container = document.getElementById('packagesList');
+            const levelSelect = document.getElementById('packageExpiryLevel');
             container.innerHTML = packages.map(p => `
-                <tr class="border-b border-white/10">
-                    <td class="px-3 py-2 font-bold">লেভেল ${p.level}</td>
-                    <td class="px-3 py-2"><input type="number" id="price_${p.level}" value="${p.price}" class="w-24 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
-                    <td class="px-3 py-2"><input type="number" id="daily_${p.level}" value="${p.daily_tasks}" class="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
-                    <td class="px-3 py-2"><input type="number" id="rate_${p.level}" value="${p.task_rate}" class="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
-                    <td class="px-3 py-2"><input type="number" id="min_${p.level}" value="${p.min_withdraw}" class="w-24 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
-                    <td class="px-3 py-2"><button onclick="updatePackage(${p.level})" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">আপডেট</button></td>
+                <tr class="border-b border-white/10"><td class="px-3 py-2 font-bold">লেভেল ${p.level}</td>
+                <td class="px-3 py-2"><input type="number" id="price_${p.level}" value="${p.price}" class="w-24 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                <td class="px-3 py-2"><input type="number" id="daily_${p.level}" value="${p.daily_tasks}" class="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                <td class="px-3 py-2"><input type="number" id="rate_${p.level}" value="${p.task_rate}" class="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                <td class="px-3 py-2"><input type="number" id="min_${p.level}" value="${p.min_withdraw}" class="w-24 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                <td class="px-3 py-2"><input type="number" id="expiry_${p.level}" value="${p.expiry_days || 0}" class="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-white" placeholder="দিন"></td>
+                <td class="px-3 py-2"><button onclick="updatePackage(${p.level})" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">আপডেট</button></td>
                 </tr>
             `).join('');
+            levelSelect.innerHTML = packages.map(p => `<option value="${p.level}">লেভেল ${p.level}</option>`).join('');
+            loadUserSelects();
         }
 
         async function updatePackage(level) {
-            const price = document.getElementById(`price_${level}`).value;
-            const daily_tasks = document.getElementById(`daily_${level}`).value;
-            const task_rate = document.getElementById(`rate_${level}`).value;
-            const min_withdraw = document.getElementById(`min_${level}`).value;
-            
             try {
                 const res = await fetch('/admin/update-package', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ level, price: document.getElementById(`price_${level}`).value, daily_tasks: document.getElementById(`daily_${level}`).value, task_rate: document.getElementById(`rate_${level}`).value, min_withdraw: document.getElementById(`min_${level}`).value, expiry_days: document.getElementById(`expiry_${level}`).value })
+                });
+                if(res.ok) showMessage('packageMsg', `লেভেল ${level} আপডেট করা হয়েছে!`, false);
+                else showMessage('packageMsg', 'আপডেট ব্যর্থ!', true);
+            } catch(e) { showMessage('packageMsg', e.message, true); }
+        }
+
+        async function addNewLevel() {
+            const level = document.getElementById('newLevelNumber').value;
+            const price = document.getElementById('newLevelPrice').value;
+            const daily_tasks = document.getElementById('newLevelTasks').value;
+            const task_rate = document.getElementById('newLevelRate').value;
+            const min_withdraw = document.getElementById('newLevelMinWithdraw').value;
+            if(!level) { alert('লেভেল নাম্বার দিন!'); return; }
+            try {
+                const res = await fetch('/admin/add-new-level', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ level, price, daily_tasks, task_rate, min_withdraw })
                 });
-                if (res.ok) {
-                    showMessage('packageMsg', `লেভেল ${level} প্যাকেজ আপডেট করা হয়েছে!`);
-                } else {
-                    showMessage('packageMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
-                }
-            } catch(e) {
-                showMessage('packageMsg', e.message, true);
-            }
+                if(res.ok) { alert('নতুন লেভেল যোগ করা হয়েছে!'); loadPackages(); }
+                else alert('ব্যর্থ!');
+            } catch(e) { alert(e.message); }
         }
 
-        // রেফারেল রেট লোড
-        async function loadReferralRates() {
-            try {
-                const res = await fetch('/api/site-settings');
-                const data = await res.json();
-                if (data.referral_rates) {
-                    document.getElementById('gen1Rate').value = (data.referral_rates.gen1 * 100) || 10;
-                    document.getElementById('gen2Rate').value = (data.referral_rates.gen2 * 100) || 5;
-                    document.getElementById('gen3Rate').value = (data.referral_rates.gen3 * 100) || 2;
-                }
-            } catch(e) {
-                console.error('Error loading referral rates:', e);
-            }
+        async function loadUserSelects() {
+            const res = await fetch('/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
+            const users = await res.json();
+            const options = users.map(u => `<option value="${u.id}">${u.username} (লেভেল ${u.level})</option>`).join('');
+            document.getElementById('userLevelSelect').innerHTML = options;
+            document.getElementById('singleUserSelect').innerHTML = options;
+            document.getElementById('blockUserSelect').innerHTML = options;
         }
 
-        async function updateReferralRates() {
-            const gen1 = parseFloat(document.getElementById('gen1Rate').value) / 100;
-            const gen2 = parseFloat(document.getElementById('gen2Rate').value) / 100;
-            const gen3 = parseFloat(document.getElementById('gen3Rate').value) / 100;
-            
+        async function changeUserLevel() {
+            const userId = document.getElementById('userLevelSelect').value;
+            const newLevel = document.getElementById('newUserLevel').value;
+            if(!newLevel) { alert('নতুন লেভেল দিন!'); return; }
             try {
-                const res = await fetch('/admin/update-referral-rates', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ gen1, gen2, gen3 })
+                const res = await fetch('/admin/change-user-level', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ userId, level: newLevel })
                 });
-                if (res.ok) {
-                    showMessage('referralMsg', 'রেফারেল কমিশন হার আপডেট করা হয়েছে!');
-                } else {
-                    showMessage('referralMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
-                }
-            } catch(e) {
-                showMessage('referralMsg', e.message, true);
+                if(res.ok) alert('ইউজার লেভেল পরিবর্তন করা হয়েছে!');
+                else alert('ব্যর্থ!');
+            } catch(e) { alert(e.message); }
+        }
+
+        async function setPackageExpiry() {
+            const level = document.getElementById('packageExpiryLevel').value;
+            const days = document.getElementById('packageExpiryDays').value;
+            try {
+                const res = await fetch('/admin/set-package-expiry', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ level, expiry_days: days })
+                });
+                if(res.ok) alert('প্যাকেজ মেয়াদ নির্ধারণ করা হয়েছে!');
+                else alert('ব্যর্থ!');
+            } catch(e) { alert(e.message); }
+        }
+
+        async function sendNotificationToAll() {
+            const title = document.getElementById('notificationTitle').value;
+            const message = document.getElementById('notificationMessage').value;
+            if(!title && !message) { alert('শিরোনাম বা বার্তা দিন!'); return; }
+            try {
+                const res = await fetch('/admin/send-notification-to-all', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ title, message })
+                });
+                if(res.ok) showMessage('notificationMsg', 'সবাইকে বিজ্ঞপ্তি পাঠানো হয়েছে!', false);
+                else showMessage('notificationMsg', 'ব্যর্থ!', true);
+            } catch(e) { showMessage('notificationMsg', e.message, true); }
+        }
+
+        async function sendNotificationToUser() {
+            const userId = document.getElementById('singleUserSelect').value;
+            const title = document.getElementById('notificationTitle').value;
+            const message = document.getElementById('notificationMessage').value;
+            if(!title && !message) { alert('শিরোনাম বা বার্তা দিন!'); return; }
+            try {
+                const res = await fetch('/admin/send-notification-to-user', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ userId, title, message })
+                });
+                if(res.ok) showMessage('notificationMsg', 'ইউজারকে বিজ্ঞপ্তি পাঠানো হয়েছে!', false);
+                else showMessage('notificationMsg', 'ব্যর্থ!', true);
+            } catch(e) { showMessage('notificationMsg', e.message, true); }
+        }
+
+        async function blockUser() {
+            const userId = document.getElementById('blockUserSelect').value;
+            try {
+                const res = await fetch('/admin/block-user-tasks', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ userId, blocked: true })
+                });
+                if(res.ok) showMessage('blockMsg', 'ইউজারের টাস্ক বন্ধ করা হয়েছে!', false);
+                else showMessage('blockMsg', 'ব্যর্থ!', true);
+            } catch(e) { showMessage('blockMsg', e.message, true); }
+        }
+
+        async function unblockUser() {
+            const userId = document.getElementById('blockUserSelect').value;
+            try {
+                const res = await fetch('/admin/block-user-tasks', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ userId, blocked: false })
+                });
+                if(res.ok) showMessage('blockMsg', 'ইউজারের টাস্ক চালু করা হয়েছে!', false);
+                else showMessage('blockMsg', 'ব্যর্থ!', true);
+            } catch(e) { showMessage('blockMsg', e.message, true); }
+        }
+
+        async function blockAllUsers() {
+            if(confirm('সব ইউজারের টাস্ক বন্ধ করতে চান?')) {
+                const res = await fetch('/admin/block-all-users', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+                if(res.ok) alert('সব ইউজারের টাস্ক বন্ধ করা হয়েছে!');
+                else alert('ব্যর্থ!');
             }
         }
 
-        // ফেস ভেরিফিকেশন টগল
+        async function blockOnDate() {
+            const date = document.getElementById('blockDate').value;
+            if(!date) { alert('তারিখ নির্বাচন করুন!'); return; }
+            try {
+                const res = await fetch('/admin/block-on-date', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ date, blocked: true })
+                });
+                if(res.ok) showMessage('blockMsg', `${date} তারিখে টাস্ক বন্ধ রাখা হবে!`, false);
+                else showMessage('blockMsg', 'ব্যর্থ!', true);
+            } catch(e) { showMessage('blockMsg', e.message, true); }
+        }
+
         async function toggleFaceVerification() {
             const enabled = document.getElementById('faceToggle').checked;
             document.getElementById('faceToggleText').innerText = enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়';
-            
             try {
                 const res = await fetch('/admin/toggle-face-verification', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                     body: JSON.stringify({ enabled })
                 });
-                if (res.ok) {
-                    showMessage('faceMsg', `ফেস ভেরিফিকেশন ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে!`);
-                } else {
-                    showMessage('faceMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
-                    document.getElementById('faceToggle').checked = !enabled;
-                    document.getElementById('faceToggleText').innerText = !enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়';
-                }
-            } catch(e) {
-                showMessage('faceMsg', e.message, true);
-            }
+                if(!res.ok) { document.getElementById('faceToggle').checked = !enabled; document.getElementById('faceToggleText').innerText = !enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'; }
+            } catch(e) { console.error(e); }
         }
 
-        // কালার পিকারের sync
-        document.getElementById('themeColor')?.addEventListener('input', (e) => {
-            document.getElementById('themeColorHex').value = e.target.value;
-        });
-        document.getElementById('themeColorHex')?.addEventListener('input', (e) => {
-            document.getElementById('themeColor').value = e.target.value;
-        });
+        document.getElementById('themeColor')?.addEventListener('input', (e) => { document.getElementById('themeColorHex').value = e.target.value; });
+        document.getElementById('themeColorHex')?.addEventListener('input', (e) => { document.getElementById('themeColor').value = e.target.value; });
 
-        // পেজ লোড
-        loadSiteSettings();
-        loadPackages();
-        loadReferralRates();
-        
-        // প্রতি 30 সেকেন্ডে রিফ্রেশ
-        setInterval(() => {
-            loadPackages();
-        }, 30000);
+        loadSiteSettings(); loadPackages();
+        setInterval(() => loadPackages(), 30000);
     </script>
 </body>
 </html>

@@ -910,3 +910,75 @@ app.post('/admin/toggle-face-verification', authenticate, isAdmin, async (req, r
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ============ অ্যাডমিন কন্ট্রোল API ============
+
+// নতুন লেভেল যোগ করুন
+app.post('/admin/add-new-level', authenticate, isAdmin, async (req, res) => {
+    const { level, price, daily_tasks, task_rate, min_withdraw } = req.body;
+    try {
+        await pool.query('INSERT INTO level_packages (level, price, daily_tasks, task_rate, min_withdraw) VALUES ($1, $2, $3, $4, $5)', [level, price, daily_tasks, task_rate, min_withdraw]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ইউজার লেভেল পরিবর্তন করুন
+app.post('/admin/change-user-level', authenticate, isAdmin, async (req, res) => {
+    const { userId, level } = req.body;
+    try {
+        await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// প্যাকেজ মেয়াদ নির্ধারণ করুন
+app.post('/admin/set-package-expiry', authenticate, isAdmin, async (req, res) => {
+    const { level, expiry_days } = req.body;
+    try {
+        await pool.query('UPDATE level_packages SET expiry_days = $1 WHERE level = $2', [expiry_days, level]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// সবাইকে বিজ্ঞপ্তি দিন
+app.post('/admin/send-notification-to-all', authenticate, isAdmin, async (req, res) => {
+    const { title, message } = req.body;
+    try {
+        await pool.query('INSERT INTO notifications (title, message, created_at) VALUES ($1, $2, NOW())', [title, message]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// নির্দিষ্ট ইউজারকে বিজ্ঞপ্তি দিন
+app.post('/admin/send-notification-to-user', authenticate, isAdmin, async (req, res) => {
+    const { userId, title, message } = req.body;
+    try {
+        await pool.query('INSERT INTO user_notifications (user_id, title, message, created_at) VALUES ($1, $2, $3, NOW())', [userId, title, message]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ইউজারের টাস্ক বন্ধ/চালু করুন
+app.post('/admin/block-user-tasks', authenticate, isAdmin, async (req, res) => {
+    const { userId, blocked } = req.body;
+    try {
+        await pool.query('UPDATE users SET tasks_blocked = $1 WHERE id = $2', [blocked, userId]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// সবাইকে বন্ধ করুন
+app.post('/admin/block-all-users', authenticate, isAdmin, async (req, res) => {
+    try {
+        await pool.query('UPDATE users SET tasks_blocked = true WHERE role != $1', ['admin']);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// নির্দিষ্ট তারিখে বন্ধ রাখুন
+app.post('/admin/block-on-date', authenticate, isAdmin, async (req, res) => {
+    const { date, blocked } = req.body;
+    try {
+        await pool.query('INSERT INTO blocked_dates (block_date, is_blocked) VALUES ($1, $2) ON CONFLICT (block_date) DO UPDATE SET is_blocked = $2', [date, blocked]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
