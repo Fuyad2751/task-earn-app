@@ -371,39 +371,6 @@ app.get('/api/referral-commission', authenticate, async (req, res) => {
   }
 });
 
-// ============ চেক ইউজার টাস্ক করতে পারবে কিনা ============
-app.get('/api/can-do-task', authenticate, async (req, res) => {
-  const userId = req.user.id;
-  
-  try {
-    const user = await pool.query('SELECT level FROM users WHERE id=$1', [userId]);
-    const userLevel = user.rows[0].level;
-    
-    if (userLevel > 1) {
-      return res.json({ canDo: true, level: userLevel });
-    }
-    
-    const hasPackage = await pool.query(
-      'SELECT id FROM purchase_requests WHERE user_id=$1 AND level=1 AND status=$2',
-      [userId, 'approved']
-    );
-    
-    if (hasPackage.rows.length > 0) {
-      return res.json({ canDo: true, level: userLevel });
-    }
-    
-    res.json({ 
-      canDo: false, 
-      level: userLevel,
-      message: 'টাস্ক শুরু করতে লেভেল 1 প্যাকেজ কিনুন!',
-      packagePrice: 500
-    });
-    
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ============ উত্তোলন একাউন্ট API ============
 app.post('/api/create-withdrawal-account', authenticate, async (req, res) => {
   const { accountName, accountNumber, accountType, withdrawPassword } = req.body;
@@ -843,7 +810,7 @@ app.get('/api/check-profile-pic', authenticate, async (req, res) => {
 
 // ============ অ্যাডমিন কন্ট্রোল API ============
 app.post('/admin/update-site-settings', authenticate, isAdmin, async (req, res) => {
-    const { site_name, theme_color, face_verification_enabled, withdrawal_fee_percent } = req.body;
+    const { site_name, theme_color, face_verification_enabled, withdrawal_fee_percent, default_min_withdraw } = req.body;
     
     try {
         await pool.query(
@@ -852,9 +819,10 @@ app.post('/admin/update-site-settings', authenticate, isAdmin, async (req, res) 
                  theme_color = COALESCE($2, theme_color),
                  face_verification_enabled = COALESCE($3, face_verification_enabled),
                  withdrawal_fee_percent = COALESCE($4, withdrawal_fee_percent),
+                 default_min_withdraw = COALESCE($5, default_min_withdraw),
                  updated_at = NOW()
              WHERE id = 1`,
-            [site_name, theme_color, face_verification_enabled, withdrawal_fee_percent]
+            [site_name, theme_color, face_verification_enabled, withdrawal_fee_percent, default_min_withdraw]
         );
         res.json({ success: true });
     } catch (err) {
@@ -863,14 +831,14 @@ app.post('/admin/update-site-settings', authenticate, isAdmin, async (req, res) 
 });
 
 app.post('/admin/update-package', authenticate, isAdmin, async (req, res) => {
-    const { level, price, daily_tasks, task_rate, min_withdraw } = req.body;
+    const { level, price, daily_tasks, task_rate, min_withdraw, expiry_days } = req.body;
     
     try {
         await pool.query(
             `UPDATE level_packages 
-             SET price = $1, daily_tasks = $2, task_rate = $3, min_withdraw = $4 
-             WHERE level = $5`,
-            [price, daily_tasks, task_rate, min_withdraw, level]
+             SET price = $1, daily_tasks = $2, task_rate = $3, min_withdraw = $4, expiry_days = $5 
+             WHERE level = $6`,
+            [price, daily_tasks, task_rate, min_withdraw, expiry_days || 0, level]
         );
         res.json({ success: true });
     } catch (err) {
@@ -906,11 +874,6 @@ app.post('/admin/toggle-face-verification', authenticate, isAdmin, async (req, r
         res.status(500).json({ error: err.message });
     }
 });
-
-// ============ সার্ভার স্টার্ট ============
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-// ============ অ্যাডমিন কন্ট্রোল API ============
 
 // নতুন লেভেল যোগ করুন
 app.post('/admin/add-new-level', authenticate, isAdmin, async (req, res) => {
@@ -952,9 +915,25 @@ app.post('/admin/send-notification-to-all', authenticate, isAdmin, async (req, r
 app.post('/admin/send-notification-to-user', authenticate, isAdmin, async (req, res) => {
     const { userId, title, message } = req.body;
     try {
-        await pool.query('INSERT INTO user_notifications (user_id, title, message, created_at) VALUES ($1, $2, $3, NOW())', [userId, title, message]);
+        await pool.query('INSERT INTO notifications (user_id, title, message, created_at) VALUES ($1, $2, $3, NOW())', [userId, title, message]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ইউজারের নোটিফিকেশন দেখার API
+app.get('/api/my-notifications', authenticate, async (req, res) => {
+    const userId = req.user.id;
+    try {
+        const notifications = await pool.query(
+            `SELECT * FROM notifications 
+             WHERE user_id IS NULL OR user_id = $1 
+             ORDER BY created_at DESC LIMIT 10`,
+            [userId]
+        );
+        res.json(notifications.rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ইউজারের টাস্ক বন্ধ/চালু করুন
@@ -982,3 +961,60 @@ app.post('/admin/block-on-date', authenticate, isAdmin, async (req, res) => {
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
+
+// ============ চেক ইউজার টাস্ক করতে পারবে কিনা (আপডেটেড) ============
+app.get('/api/can-do-task', authenticate, async (req, res) => {
+    const userId = req.user.id;
+    
+    try {
+        const user = await pool.query('SELECT level, tasks_blocked, status FROM users WHERE id = $1', [userId]);
+        
+        if (user.rows.length === 0) {
+            return res.status(404).json({ error: 'User not found' });
+        }
+        
+        if (user.rows[0].status === 'blocked') {
+            return res.json({ canDo: false, message: 'আপনার অ্যাকাউন্ট ব্লক করা আছে। অ্যাডমিনের সাথে যোগাযোগ করুন।' });
+        }
+        
+        if (user.rows[0].tasks_blocked === true) {
+            return res.json({ canDo: false, message: 'আপনার টাস্ক করা বন্ধ আছে। অ্যাডমিনের সাথে যোগাযোগ করুন।' });
+        }
+        
+        const today = new Date().toISOString().slice(0, 10);
+        const blockedDate = await pool.query(
+            'SELECT id FROM blocked_dates WHERE block_date = $1 AND is_blocked = true',
+            [today]
+        );
+        if (blockedDate.rows.length > 0) {
+            return res.json({ canDo: false, message: 'আজকে টাস্ক বন্ধ রাখা হয়েছে।' });
+        }
+        
+        const userLevel = user.rows[0].level;
+        
+        if (userLevel === 1) {
+            const hasPackage = await pool.query(
+                'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
+                [userId, 'approved']
+            );
+            
+            if (hasPackage.rows.length === 0) {
+                return res.json({ 
+                    canDo: false, 
+                    message: 'টাস্ক শুরু করতে লেভেল 1 প্যাকেজ কিনুন!',
+                    packagePrice: 500
+                });
+            }
+        }
+        
+        res.json({ canDo: true, level: userLevel });
+        
+    } catch (err) {
+        console.error('Can-do-task error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============ সার্ভার স্টার্ট ============
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

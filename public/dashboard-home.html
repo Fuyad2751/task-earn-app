@@ -58,7 +58,8 @@
                 </div>
             </div>
         </div>
-
+        <!-- নোটিফিকেশন সেকশন -->
+        <div id="notificationArea" class="mb-6 space-y-2"></div>
         <!-- Stats Cards -->
         <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center border border-white/20">
@@ -72,7 +73,7 @@
                 <p class="text-white text-xl font-bold" id="userLevel">১</p>
             </div>
         </div>
-
+        
         <!-- Features Section -->
         <div class="mb-8">
             <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
@@ -211,6 +212,27 @@
         loadLiveWithdrawals();
         setInterval(loadLiveWithdrawals, 30000);
         setInterval(loadProfile, 60000);
+        // নোটিফিকেশন লোড করুন
+async function loadNotifications() {
+    try {
+        const res = await fetch('/api/my-notifications', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const notifications = await res.json();
+        const container = document.getElementById('notificationArea');
+        if (container && notifications.length > 0) {
+            container.innerHTML = notifications.map(n => `
+                <div class="bg-yellow-500/20 border border-yellow-500 rounded-xl p-3">
+                    <p class="text-yellow-400 font-bold text-sm">${n.title || 'নতুন বিজ্ঞপ্তি'}</p>
+                    <p class="text-white text-sm">${n.message}</p>
+                    <p class="text-gray-400 text-xs mt-1">${new Date(n.created_at).toLocaleString()}</p>
+                </div>
+            `).join('');
+        }
+    } catch(e) { console.log('Notification error:', e); }
+}
+
+        // loadProfile() এর পরে loadNotifications() কল করুন
     </script>
 </body>
 </html>
