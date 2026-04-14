@@ -6,6 +6,8 @@
     <title>রেজিস্টার - টাস্ক কিং</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="/face-verify.js"></script>
 </head>
 <body class="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 min-h-screen flex items-center justify-center p-4">
     <div class="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/20">
@@ -34,7 +36,23 @@
                 <label class="block text-white mb-2">রেফারেল কোড (ঐচ্ছিক)</label>
                 <input type="text" id="refCode" placeholder="যদি থাকে" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white">
             </div>
-            <button onclick="register()" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl hover:from-yellow-500 hover:to-orange-600 transition duration-300 transform hover:scale-105 shadow-lg">
+            
+            <!-- ফেস ভেরিফিকেশন সেকশন -->
+            <div class="bg-yellow-500/20 rounded-xl p-4">
+                <p class="text-white text-sm mb-2"><i class="fas fa-face-smile mr-2"></i> ফেস ভেরিফিকেশন বাধ্যতামূলক</p>
+                <div class="relative">
+                    <video id="faceVideo" autoplay playsinline class="w-full rounded-lg bg-black"></video>
+                    <div id="faceStatus" class="absolute bottom-2 left-0 right-0 text-center text-white text-xs bg-black/50 p-1 rounded">ক্যামেরা চালু হচ্ছে...</div>
+                </div>
+                <button type="button" id="captureFaceBtn" class="mt-2 w-full bg-purple-600 text-white font-bold py-2 rounded-xl hover:bg-purple-700 transition">
+                    <i class="fas fa-camera mr-2"></i> ফেস ক্যাপচার করুন
+                </button>
+                <div id="faceCapturedStatus" class="text-center text-green-400 text-sm mt-2 hidden">
+                    <i class="fas fa-check-circle mr-1"></i> ফেস ক্যাপচার করা হয়েছে
+                </div>
+            </div>
+            
+            <button id="registerBtn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl hover:from-yellow-500 hover:to-orange-600 transition duration-300 transform hover:scale-105 shadow-lg" disabled>
                 <i class="fas fa-user-plus mr-2"></i> রেজিস্টার করুন
             </button>
         </div>
@@ -45,6 +63,58 @@
     </div>
 
     <script>
+        let faceDescriptor = null;
+        let faceCaptured = false;
+        let video = null;
+        let stream = null;
+        
+        // ফেস মডেল লোড করুন
+        async function loadModels() {
+            const modelsPath = '/models';
+            await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
+            await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
+            await faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath);
+            console.log('✅ ফেস মডেল লোডেড');
+            startWebcam();
+        }
+        
+        // ওয়েবক্যাম শুরু করুন
+        async function startWebcam() {
+            video = document.getElementById('faceVideo');
+            stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+                document.getElementById('faceStatus').innerText = 'মুখ ক্যামেরার সামনে রাখুন';
+            };
+        }
+        
+        // ফেস ক্যাপচার করুন
+        async function captureFace() {
+            if (!video) {
+                alert('ক্যামেরা শুরু হয়নি');
+                return;
+            }
+            
+            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+            
+            if (!detection) {
+                alert('মুখ শনাক্ত করা যায়নি! ভালো আলোতে সোজা হয়ে বসুন।');
+                return;
+            }
+            
+            faceDescriptor = Array.from(detection.descriptor);
+            faceCaptured = true;
+            
+            document.getElementById('faceCapturedStatus').classList.remove('hidden');
+            document.getElementById('registerBtn').disabled = false;
+            document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-check-circle mr-2"></i> ফেস ক্যাপচার করা হয়েছে';
+            document.getElementById('captureFaceBtn').classList.add('bg-green-600');
+        }
+        
+        // রেজিস্ট্রেশন
         async function register() {
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
@@ -55,22 +125,40 @@
                 alert('সব ঘর পূরণ করুন!');
                 return;
             }
+            
+            if (!faceCaptured || !faceDescriptor) {
+                alert('দয়া করে ফেস ক্যাপচার করুন!');
+                return;
+            }
 
             const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, mobile, referralCode: refCode })
+                body: JSON.stringify({ 
+                    username, 
+                    password, 
+                    mobile, 
+                    referralCode: refCode,
+                    faceDescriptor: faceDescriptor
+                })
             });
 
             if (res.ok) {
                 const data = await res.json();
                 localStorage.setItem('authToken', data.token);
                 alert('রেজিস্ট্রেশন সফল!');
-                window.location.href = 'dashboard.html';
+                window.location.href = 'dashboard-home.html';
             } else {
-                alert('ইউজারনেম আগে থেকেই আছে বা অন্য সমস্যা');
+                const error = await res.json();
+                alert(error.error || 'ইউজারনেম আগে থেকেই আছে বা ফেস ভেরিফিকেশন ব্যর্থ');
             }
         }
+        
+        // পেজ লোড হলে
+        loadModels();
+        
+        document.getElementById('captureFaceBtn').onclick = captureFace;
+        document.getElementById('registerBtn').onclick = register;
     </script>
 </body>
 </html>

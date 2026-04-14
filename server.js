@@ -1054,3 +1054,117 @@ app.post('/api/match-face', authenticate, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+// ============ রেজিস্ট্রেশন API (ফেস ভেরিফিকেশন সহ) ============
+app.post('/api/register', async (req, res) => {
+  const { username, password, mobile, referralCode, faceDescriptor } = req.body;
+  
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+    
+    // ফেস ডেস্ক্রিপ্টর চেক করুন (বাধ্যতামূলক)
+    if (!faceDescriptor || faceDescriptor.length === 0) {
+      return res.status(400).json({ error: 'ফেস ভেরিফিকেশন প্রয়োজন!' });
+    }
+    
+    let refCode;
+    let isUnique = false;
+    while (!isUnique) {
+      refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      const existing = await pool.query('SELECT id FROM users WHERE referral_code = $1', [refCode]);
+      if (existing.rows.length === 0) isUnique = true;
+    }
+    
+    let referrerId = null;
+    
+    if (referralCode && referralCode.trim() !== '') {
+      const refUser = await pool.query(
+        'SELECT id FROM users WHERE referral_code = $1', 
+        [referralCode.toUpperCase().trim()]
+      );
+      if (refUser.rows.length > 0) {
+        referrerId = refUser.rows[0].id;
+      }
+    }
+    
+    const result = await pool.query(
+      `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at) 
+       VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 'active', NOW()) RETURNING id`,
+      [username, hashed, mobile, refCode, referrerId]
+    );
+    
+    const userId = result.rows[0].id;
+    
+    // ফেস ডেস্ক্রিপ্টর সংরক্ষণ করুন
+    await pool.query(
+      'INSERT INTO face_descriptors (user_id, descriptor) VALUES ($1, $2)',
+      [userId, JSON.stringify(faceDescriptor)]
+    );
+    
+    const token = jwt.sign({ id: userId, username }, process.env.JWT_SECRET);
+    res.json({ token, username });
+    
+  } catch (err) {
+    console.error('Registration error:', err);
+    res.status(400).json({ error: 'Username already exists or face verification failed' });
+  }
+});
+// ============ প্রোফাইল পিক আপলোড API ============
+const profileUpload = multer({ 
+    storage: multer.diskStorage({
+        destination: 'uploads/profiles/',
+        filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+    }),
+    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (mimetype && extname) {
+            return cb(null, true);
+        } else {
+            cb(new Error('শুধু ছবি ফাইল অনুমোদিত (jpg, png, gif)'));
+        }
+    }
+}).single('profile_pic');
+
+app.post('/api/upload-profile-pic', authenticate, (req, res) => {
+    profileUpload(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({ error: err.message });
+        }
+        
+        if (!req.file) {
+            return res.status(400).json({ error: 'কোনো ছবি নির্বাচন করা হয়নি' });
+        }
+        
+        const userId = req.user.id;
+        const profilePicUrl = `/uploads/profiles/${req.file.filename}`;
+        
+        try {
+            await pool.query('UPDATE users SET profile_pic = $1 WHERE id = $2', [profilePicUrl, userId]);
+            res.json({ success: true, profile_pic: profilePicUrl });
+        } catch (err) {
+            res.status(500).json({ error: err.message });
+        }
+    });
+});
+
+// প্রোফাইল পিক স্ট্যাটাস চেক API
+app.get('/api/check-profile-pic', authenticate, async (req, res) => {
+    const userId = req.user.id;
+    
+    try {
+        const result = await pool.query('SELECT profile_pic FROM users WHERE id = $1', [userId]);
+        res.json({ hasProfilePic: !!result.rows[0]?.profile_pic });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+app.get('/api/profile', authenticate, async (req, res) => {
+  const user = await pool.query(
+    'SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, profile_pic, created_at FROM users WHERE id=$1',
+    [req.user.id]
+  );
+  const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+  res.json({ ...user.rows[0], balance });
+});
