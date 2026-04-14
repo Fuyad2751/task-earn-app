@@ -16,6 +16,18 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
+// মডেল ফাইলের জন্য সঠিক হেডার সেট করুন
+app.use('/models', express.static('public/models', {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.json')) {
+            res.setHeader('Content-Type', 'application/json');
+        } else if (path.endsWith('.shard1') || path.endsWith('.shard2')) {
+            res.setHeader('Content-Type', 'application/octet-stream');
+        }
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+}));
+
 const storage = multer.diskStorage({
   destination: 'uploads/',
   filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
@@ -40,46 +52,76 @@ async function isAdmin(req, res, next) {
   res.status(403).json({ error: 'Admin only' });
 }
 
+// ============ সাইট সেটিংস API ============
+app.get('/api/site-settings', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM site_settings WHERE id = 1');
+        res.json(result.rows[0] || {});
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/face-verification-status', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT face_verification_enabled FROM site_settings WHERE id = 1');
+        const isEnabled = result.rows[0]?.face_verification_enabled !== false;
+        res.json({ enabled: isEnabled });
+    } catch (err) {
+        res.json({ enabled: true });
+    }
+});
+
 // ============ রেজিস্ট্রেশন API ============
 app.post('/api/register', async (req, res) => {
-  const { username, password, mobile, referralCode } = req.body;
-  
-  try {
-    const hashed = await bcrypt.hash(password, 10);
+    const { username, password, mobile, referralCode, faceDescriptor } = req.body;
     
-    let refCode;
-    let isUnique = false;
-    while (!isUnique) {
-      refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const existing = await pool.query('SELECT id FROM users WHERE referral_code = $1', [refCode]);
-      if (existing.rows.length === 0) isUnique = true;
+    try {
+        const settings = await pool.query('SELECT face_verification_enabled FROM site_settings WHERE id = 1');
+        const faceVerificationRequired = settings.rows[0]?.face_verification_enabled !== false;
+        
+        if (faceVerificationRequired && (!faceDescriptor || faceDescriptor.length === 0)) {
+            return res.status(400).json({ error: 'ফেস ভেরিফিকেশন প্রয়োজন!' });
+        }
+        
+        const hashed = await bcrypt.hash(password, 10);
+        
+        let refCode;
+        let isUnique = false;
+        while (!isUnique) {
+            refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const existing = await pool.query('SELECT id FROM users WHERE referral_code = $1', [refCode]);
+            if (existing.rows.length === 0) isUnique = true;
+        }
+        
+        let referrerId = null;
+        if (referralCode && referralCode.trim() !== '') {
+            const refUser = await pool.query('SELECT id FROM users WHERE referral_code = $1', [referralCode.toUpperCase().trim()]);
+            if (refUser.rows.length > 0) referrerId = refUser.rows[0].id;
+        }
+        
+        const result = await pool.query(
+            `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at) 
+             VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 'active', NOW()) RETURNING id`,
+            [username, hashed, mobile, refCode, referrerId]
+        );
+        
+        const userId = result.rows[0].id;
+        
+        if (faceVerificationRequired && faceDescriptor) {
+            await pool.query(
+                'INSERT INTO face_descriptors (user_id, descriptor) VALUES ($1, $2)',
+                [userId, JSON.stringify(faceDescriptor)]
+            );
+        }
+        
+        const token = jwt.sign({ id: userId, username }, process.env.JWT_SECRET);
+        res.json({ token, username });
+        
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(400).json({ error: 'Username already exists or invalid data' });
     }
-    
-    let referrerId = null;
-    
-    if (referralCode && referralCode.trim() !== '') {
-      const refUser = await pool.query(
-        'SELECT id FROM users WHERE referral_code = $1', 
-        [referralCode.toUpperCase().trim()]
-      );
-      if (refUser.rows.length > 0) {
-        referrerId = refUser.rows[0].id;
-      }
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at) 
-       VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 'active', NOW()) RETURNING id`,
-      [username, hashed, mobile, refCode, referrerId]
-    );
-    
-    const token = jwt.sign({ id: result.rows[0].id, username }, process.env.JWT_SECRET);
-    res.json({ token, username });
-    
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(400).json({ error: 'Username already exists' });
-  }
 });
 
 // ============ লগইন API ============
@@ -139,58 +181,6 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     );
     const completedIds = completed.rows.map(r => r.task_id);
     
-    const tasksWithStatus = tasks.rows.map(t => ({ 
-      ...t, 
-      completed: completedIds.includes(t.id),
-      task_rate: parseFloat(t.task_rate)
-    }));
-    
-    res.json(tasksWithStatus);
-    
-  } catch (err) {
-    console.error('Tasks API error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});// ============ টাস্ক API - শুধু বর্তমান লেভেলের টাস্ক দেখাবে ============
-app.get('/api/my-tasks', authenticate, async (req, res) => {
-  const userId = req.user.id;
-  
-  try {
-    const user = await pool.query('SELECT level FROM users WHERE id = $1', [userId]);
-    const userLevel = user.rows[0].level;
-    
-    if (userLevel === 1) {
-      const hasPackage = await pool.query(
-        'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
-        [userId, 'approved']
-      );
-      
-      if (hasPackage.rows.length === 0) {
-        return res.json({ 
-          noPackage: true, 
-          message: 'টাস্ক শুরু করতে লেভেল 1 প্যাকেজ কিনুন!',
-          packagePrice: 500
-        });
-      }
-    }
-    
-    const tasks = await pool.query(
-      `SELECT t.*, lp.task_rate 
-       FROM tasks t 
-       JOIN level_packages lp ON t.level = lp.level 
-       WHERE t.level = $1 
-       ORDER BY t.id`,
-      [userLevel]
-    );
-    
-    const today = new Date().toISOString().slice(0, 10);
-    const completed = await pool.query(
-      'SELECT task_id FROM user_daily_tasks WHERE user_id = $1 AND completed_date = $2',
-      [userId, today]
-    );
-    const completedIds = completed.rows.map(r => r.task_id);
-    
-    // প্রতিটি টাস্কের জন্য ডিফল্ট ভিডিও ও প্রশ্ন যোগ করুন
     const tasksWithData = tasks.rows.map(t => ({
       ...t,
       completed: completedIds.includes(t.id),
@@ -253,17 +243,22 @@ app.post('/api/complete-task', authenticate, async (req, res) => {
   }
 });
 
-// ============ প্যাকেজ ক্রয় API (অটোমেটিক) ============
+// ============ প্যাকেজ ক্রয় API ============
 app.post('/api/buy-package', authenticate, async (req, res) => {
   const { level } = req.body;
   const userId = req.user.id;
   
   try {
     const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    
+    if (user.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
     const userLevel = user.rows[0].level;
     
     if (userLevel >= level) {
-      return res.status(400).json({ error: 'You already have this level or higher' });
+      return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন!` });
     }
     
     const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
@@ -271,7 +266,6 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
     const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
     
     if (userBalance >= packagePrice) {
-      // ✅ ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
       await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
       await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
       await distributePackageCommission(userId, level, packagePrice);
@@ -282,7 +276,6 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
         autoApproved: true
       });
     } else {
-      // ❌ ব্যালেন্স কম - পেমেন্ট অপশন দেখান
       const needAmount = packagePrice - userBalance;
       res.json({ 
         success: false, 
@@ -300,84 +293,10 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
   }
 });
 
-// ============ প্যাকেজ পেমেন্ট রিকোয়েস্ট API ============
-app.post('/api/request-package-payment', authenticate, async (req, res) => {
-  const { level, amount, transactionId, paymentMethod } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    if (!transactionId) {
-      return res.status(400).json({ error: 'ট্রানজাকশন আইডি দিন!' });
-    }
-    
-    // পেমেন্ট রিকোয়েস্ট সেভ করুন
-    await pool.query(
-      `INSERT INTO package_payment_requests (user_id, level, amount, transaction_id, payment_method, status, requested_at) 
-       VALUES ($1, $2, $3, $4, $5, 'pending', NOW())`,
-      [userId, level, amount, transactionId, paymentMethod || 'mobile_banking']
-    );
-    
-    res.json({ success: true, message: 'পেমেন্ট রিকোয়েস্ট জমা হয়েছে। অ্যাডমিন যাচাই করে ব্যালেন্স যোগ করবেন।' });
-    
-  } catch (err) {
-    console.error('Package payment request error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ============ অ্যাডমিন: পেন্ডিং প্যাকেজ পেমেন্ট রিকোয়েস্ট দেখুন ============
-app.get('/admin/pending-package-payments', authenticate, isAdmin, async (req, res) => {
-  try {
-    const requests = await pool.query(`
-      SELECT ppr.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
-      FROM package_payment_requests ppr
-      JOIN users u ON u.id = ppr.user_id
-      WHERE ppr.status = 'pending'
-      ORDER BY ppr.requested_at ASC
-    `);
-    res.json(requests.rows);
-  } catch (err) {
-    console.error('Pending package payments error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// ============ অ্যাডমিন: প্যাকেজ পেমেন্ট অ্যাপ্রুভ করুন ============
-app.post('/admin/approve-package-payment', authenticate, isAdmin, async (req, res) => {
-  const { requestId } = req.body;
-  
-  try {
-    const request = await pool.query(
-      'SELECT user_id, level, amount FROM package_payment_requests WHERE id = $1 AND status = $2',
-      [requestId, 'pending']
-    );
-    if (request.rows.length === 0) {
-      return res.status(404).json({ error: 'রিকোয়েস্ট পাওয়া যায়নি' });
-    }
-    
-    const { user_id, level, amount } = request.rows[0];
-    
-    // ইউজারের ব্যালেন্স আপডেট করুন
-    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, user_id]);
-    
-    // রিকোয়েস্ট স্ট্যাটাস আপডেট করুন
-    await pool.query(
-      'UPDATE package_payment_requests SET status = $1, processed_at = NOW() WHERE id = $2',
-      ['approved', requestId]
-    );
-    
-    res.json({ success: true, message: 'পেমেন্ট অ্যাপ্রুভ করা হয়েছে এবং ব্যালেন্স যোগ করা হয়েছে!' });
-    
-  } catch (err) {
-    console.error('Approve package payment error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
 // ============ প্রোফাইল API ============
 app.get('/api/profile', authenticate, async (req, res) => {
   const user = await pool.query(
-    'SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, created_at FROM users WHERE id=$1',
+    'SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, profile_pic, created_at FROM users WHERE id=$1',
     [req.user.id]
   );
   const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
@@ -390,7 +309,7 @@ app.get('/api/live-withdrawals', async (req, res) => {
   res.json(live.rows);
 });
 
-// ============ রেফারেল তালিকা API ============
+// ============ রেফারেল API ============
 app.get('/api/my-referrals', authenticate, async (req, res) => {
   const userId = req.user.id;
   
@@ -435,7 +354,6 @@ app.get('/api/my-referrals', authenticate, async (req, res) => {
   }
 });
 
-// ============ রেফারেল কমিশন API ============
 app.get('/api/referral-commission', authenticate, async (req, res) => {
   const userId = req.user.id;
   
@@ -486,27 +404,6 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
   }
 });
 
-// ============ ব্যালেন্স রিকোয়েস্ট API ============
-app.post('/api/request-balance', authenticate, async (req, res) => {
-  const { amount, transactionId, paymentMethod } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    if (!amount || amount < 100) return res.status(400).json({ error: 'ন্যূনতম ১০০ টাকা আবেদন করতে পারবেন' });
-    if (!transactionId) return res.status(400).json({ error: 'ট্রানজাকশন আইডি দিন' });
-    
-    await pool.query(
-      `INSERT INTO balance_requests (user_id, amount, transaction_id, payment_method, status, requested_at) 
-       VALUES ($1, $2, $3, $4, 'pending', NOW())`,
-      [userId, amount, transactionId, paymentMethod || 'mobile_banking']
-    );
-    res.json({ success: true, message: 'আবেদন জমা হয়েছে। অ্যাডমিন যাচাই করে ব্যালেন্স যোগ করবেন။' });
-  } catch (err) { 
-    console.error('Balance request error:', err);
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
 // ============ উত্তোলন একাউন্ট API ============
 app.post('/api/create-withdrawal-account', authenticate, async (req, res) => {
   const { accountName, accountNumber, accountType, withdrawPassword } = req.body;
@@ -554,7 +451,7 @@ app.get('/api/my-withdrawal-account', authenticate, async (req, res) => {
   }
 });
 
-// ============ উত্তোলন রিকোয়েস্ট API (আবেদনের সাথে সাথে ব্যালেন্স কর্তন) ============
+// ============ উত্তোলন রিকোয়েস্ট API ============
 app.post('/api/request-withdraw', authenticate, async (req, res) => {
   const { amount, withdrawPassword } = req.body;
   const userId = req.user.id;
@@ -599,7 +496,6 @@ app.post('/api/request-withdraw', authenticate, async (req, res) => {
     const fee = amount * 0.10;
     const netAmount = amount - fee;
     
-    // ✅ ব্যালেন্স থেকে টাকা কর্তন করুন (এখনই)
     await pool.query(
       'UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2',
       [amount, userId]
@@ -625,13 +521,8 @@ app.post('/api/request-withdraw', authenticate, async (req, res) => {
 // ============ অ্যাডমিন API ============
 app.post('/admin/add-balance', authenticate, isAdmin, async (req, res) => {
   const { userId, amount } = req.body;
-  
-  try {
-    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, userId]);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
+  await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, userId]);
+  res.json({ success: true });
 });
 
 app.get('/admin/pending-packages', authenticate, isAdmin, async (req, res) => {
@@ -671,49 +562,6 @@ app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-app.get('/admin/pending-balance-requests', authenticate, isAdmin, async (req, res) => {
-  try {
-    const requests = await pool.query(`
-      SELECT br.*, u.username, u.mobile, u.total_earnings, u.total_withdrawn
-      FROM balance_requests br
-      JOIN users u ON u.id = br.user_id
-      WHERE br.status = 'pending'
-      ORDER BY br.requested_at ASC
-    `);
-    res.json(requests.rows);
-  } catch (err) { 
-    console.error('Pending balance requests error:', err);
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
-app.post('/admin/approve-balance-request', authenticate, isAdmin, async (req, res) => {
-  const { requestId } = req.body;
-  try {
-    const request = await pool.query('SELECT user_id, amount FROM balance_requests WHERE id = $1 AND status = $2', [requestId, 'pending']);
-    if (request.rows.length === 0) return res.status(404).json({ error: 'রিকোয়েস্ট পাওয়া যায়নি' });
-    const { user_id, amount } = request.rows[0];
-    await pool.query('UPDATE users SET total_earnings = total_earnings + $1 WHERE id = $2', [amount, user_id]);
-    await pool.query('UPDATE balance_requests SET status = $1, processed_at = NOW() WHERE id = $2', ['approved', requestId]);
-    res.json({ success: true });
-  } catch (err) { 
-    console.error('Approve balance error:', err);
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
-app.post('/admin/reject-balance-request', authenticate, isAdmin, async (req, res) => {
-  const { requestId, note } = req.body;
-  try {
-    await pool.query('UPDATE balance_requests SET status = $1, note = $2, processed_at = NOW() WHERE id = $3', ['rejected', note || '', requestId]);
-    res.json({ success: true });
-  } catch (err) { 
-    console.error('Reject balance error:', err);
-    res.status(500).json({ error: err.message }); 
-  }
-});
-
-// অ্যাডমিন: পেন্ডিং উত্তোলন (একাউন্ট তথ্য সহ)
 app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) => {
   try {
     const pending = await pool.query(`
@@ -726,12 +574,10 @@ app.get('/admin/pending-withdrawals', authenticate, isAdmin, async (req, res) =>
     `);
     res.json(pending.rows);
   } catch (err) {
-    console.error('Pending withdrawals error:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
-// অ্যাডমিন: উত্তোলন অ্যাপ্রুভ করুন
 app.post('/admin/process-withdraw', authenticate, isAdmin, async (req, res) => {
   const { withdrawalId } = req.body;
   
@@ -755,7 +601,7 @@ app.post('/admin/process-withdraw', authenticate, isAdmin, async (req, res) => {
       [user.rows[0].username, withdraw.rows[0].net_amount]
     );
     
-    res.json({ success: true, message: 'উত্তোলন অ্যাপ্রুভ করা হয়েছে এবং টাকা পাঠানো হবে' });
+    res.json({ success: true });
     
   } catch (err) {
     console.error('Process withdraw error:', err);
@@ -763,7 +609,6 @@ app.post('/admin/process-withdraw', authenticate, isAdmin, async (req, res) => {
   }
 });
 
-// অ্যাডমিন: উত্তোলন রিজেক্ট করুন (টাকা ফেরত)
 app.post('/admin/reject-withdraw', authenticate, isAdmin, async (req, res) => {
   const { withdrawalId, reason } = req.body;
   
@@ -778,7 +623,6 @@ app.post('/admin/reject-withdraw', authenticate, isAdmin, async (req, res) => {
     
     const { user_id, amount } = withdraw.rows[0];
     
-    // ✅ টাকা ফেরত দিন
     await pool.query(
       'UPDATE users SET total_withdrawn = total_withdrawn - $1 WHERE id = $2',
       [amount, user_id]
@@ -789,53 +633,10 @@ app.post('/admin/reject-withdraw', authenticate, isAdmin, async (req, res) => {
       ['rejected', reason || 'অ্যাডমিন দ্বারা বাতিল', withdrawalId]
     );
     
-    res.json({ success: true, message: 'উত্তোলন রিজেক্ট করা হয়েছে এবং টাকা ফেরত দেওয়া হয়েছে' });
+    res.json({ success: true });
     
   } catch (err) {
     console.error('Reject withdraw error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.get('/admin/pending-withdrawal-accounts', authenticate, isAdmin, async (req, res) => {
-  try {
-    const accounts = await pool.query(`
-      SELECT wa.*, u.username, u.mobile 
-      FROM withdrawal_accounts wa
-      JOIN users u ON u.id = wa.user_id
-      WHERE wa.is_verified = false
-      ORDER BY wa.requested_at ASC
-    `);
-    res.json(accounts.rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/admin/verify-withdrawal-account', authenticate, isAdmin, async (req, res) => {
-  const { accountId } = req.body;
-  
-  try {
-    await pool.query(
-      'UPDATE withdrawal_accounts SET is_verified = true, verified_at = NOW() WHERE id = $1',
-      [accountId]
-    );
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-app.post('/admin/deactivate-withdrawal-account', authenticate, isAdmin, async (req, res) => {
-  const { accountId } = req.body;
-  
-  try {
-    await pool.query(
-      'UPDATE withdrawal_accounts SET is_active = false WHERE id = $1',
-      [accountId]
-    );
-    res.json({ success: true });
-  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -934,80 +735,17 @@ async function distributeTaskCommission(userId, taskReward, taskLevel) {
   }
 }
 
-// ============ সার্ভার স্টার্ট ============
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-app.post('/api/buy-package', authenticate, async (req, res) => {
-  const { level } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
-    
-    if (user.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    const userLevel = user.rows[0].level;
-    
-    // 🔥 সঠিক চেক: ইউজার যদি ইতিমধ্যে এই লেভেলের উপরে থাকে (সমান হলে নয়)
-    if (userLevel > level) {
-      return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন!` });
-    }
-    
-    // যদি ইউজার ইতিমধ্যে এই লেভেলে থাকে, তাহলে আপগ্রেডের দরকার নেই
-    if (userLevel === level) {
-      return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${level} এ আছেন!` });
-    }
-    
-    const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
-    const packagePrice = pkg.rows[0].price;
-    const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
-    
-    if (userBalance >= packagePrice) {
-      await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
-      await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
-      await distributePackageCommission(userId, level, packagePrice);
-      
-      res.json({ 
-        success: true, 
-        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!`,
-        autoApproved: true
-      });
-    } else {
-      const needAmount = packagePrice - userBalance;
-      res.json({ 
-        success: false, 
-        needBalance: true,
-        needAmount: needAmount,
-        packagePrice: packagePrice,
-        userBalance: userBalance,
-        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা পেমেন্ট করুন।`
-      });
-    }
-    
-  } catch (err) {
-    console.error('Package buy error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
 // ============ ফেস ভেরিফিকেশন API ============
-
-// ফেস ডিস্ক্রিপ্টর সেভ করার API
 app.post('/api/save-face-descriptor', authenticate, async (req, res) => {
     const { descriptor } = req.body;
     const userId = req.user.id;
     
     try {
-        // আগের ডাটা থাকলে ডিলিট করুন
         await pool.query('DELETE FROM face_descriptors WHERE user_id = $1', [userId]);
-        
-        // নতুন ডাটা সেভ করুন
         await pool.query(
             'INSERT INTO face_descriptors (user_id, descriptor) VALUES ($1, $2)',
             [userId, JSON.stringify(descriptor)]
         );
-        
         res.json({ success: true, message: 'ফেস নিবন্ধন সম্পন্ন!' });
     } catch (err) {
         console.error('Save face error:', err);
@@ -1015,13 +753,11 @@ app.post('/api/save-face-descriptor', authenticate, async (req, res) => {
     }
 });
 
-// ফেস ম্যাচিং API
 app.post('/api/match-face', authenticate, async (req, res) => {
     const { descriptor } = req.body;
     const userId = req.user.id;
     
     try {
-        // ইউজারের সংরক্ষিত ফেস ডিস্ক্রিপ্টর বের করুন
         const result = await pool.query(
             'SELECT descriptor FROM face_descriptors WHERE user_id = $1',
             [userId]
@@ -1033,14 +769,12 @@ app.post('/api/match-face', authenticate, async (req, res) => {
         
         const savedDescriptor = JSON.parse(result.rows[0].descriptor);
         
-        // ইউক্লিডিয়ান দূরত্ব গণনা (দূরত্ব যত কম, মিল তত বেশি)
         let distance = 0;
         for (let i = 0; i < descriptor.length; i++) {
             distance += Math.pow(descriptor[i] - savedDescriptor[i], 2);
         }
         distance = Math.sqrt(distance);
         
-        // দূরত্ব 0.6 এর কম হলে মিলেছে (টিউন করা যায়)
         const isMatch = distance < 0.6;
         
         res.json({ 
@@ -1054,67 +788,14 @@ app.post('/api/match-face', authenticate, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-// ============ রেজিস্ট্রেশন API (ফেস ভেরিফিকেশন সহ) ============
-app.post('/api/register', async (req, res) => {
-  const { username, password, mobile, referralCode, faceDescriptor } = req.body;
-  
-  try {
-    const hashed = await bcrypt.hash(password, 10);
-    
-    // ফেস ডেস্ক্রিপ্টর চেক করুন (বাধ্যতামূলক)
-    if (!faceDescriptor || faceDescriptor.length === 0) {
-      return res.status(400).json({ error: 'ফেস ভেরিফিকেশন প্রয়োজন!' });
-    }
-    
-    let refCode;
-    let isUnique = false;
-    while (!isUnique) {
-      refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      const existing = await pool.query('SELECT id FROM users WHERE referral_code = $1', [refCode]);
-      if (existing.rows.length === 0) isUnique = true;
-    }
-    
-    let referrerId = null;
-    
-    if (referralCode && referralCode.trim() !== '') {
-      const refUser = await pool.query(
-        'SELECT id FROM users WHERE referral_code = $1', 
-        [referralCode.toUpperCase().trim()]
-      );
-      if (refUser.rows.length > 0) {
-        referrerId = refUser.rows[0].id;
-      }
-    }
-    
-    const result = await pool.query(
-      `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at) 
-       VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 'active', NOW()) RETURNING id`,
-      [username, hashed, mobile, refCode, referrerId]
-    );
-    
-    const userId = result.rows[0].id;
-    
-    // ফেস ডেস্ক্রিপ্টর সংরক্ষণ করুন
-    await pool.query(
-      'INSERT INTO face_descriptors (user_id, descriptor) VALUES ($1, $2)',
-      [userId, JSON.stringify(faceDescriptor)]
-    );
-    
-    const token = jwt.sign({ id: userId, username }, process.env.JWT_SECRET);
-    res.json({ token, username });
-    
-  } catch (err) {
-    console.error('Registration error:', err);
-    res.status(400).json({ error: 'Username already exists or face verification failed' });
-  }
-});
+
 // ============ প্রোফাইল পিক আপলোড API ============
 const profileUpload = multer({ 
     storage: multer.diskStorage({
         destination: 'uploads/profiles/',
         filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
     }),
-    limits: { fileSize: 2 * 1024 * 1024 }, // 2MB limit
+    limits: { fileSize: 2 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const allowedTypes = /jpeg|jpg|png|gif/;
         const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
@@ -1149,7 +830,6 @@ app.post('/api/upload-profile-pic', authenticate, (req, res) => {
     });
 });
 
-// প্রোফাইল পিক স্ট্যাটাস চেক API
 app.get('/api/check-profile-pic', authenticate, async (req, res) => {
     const userId = req.user.id;
     
@@ -1160,38 +840,8 @@ app.get('/api/check-profile-pic', authenticate, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-app.get('/api/profile', authenticate, async (req, res) => {
-  const user = await pool.query(
-    'SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, profile_pic, created_at FROM users WHERE id=$1',
-    [req.user.id]
-  );
-  const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
-  res.json({ ...user.rows[0], balance });
-});
-// মডেল ফাইলের জন্য সঠিক হেডার সেট করুন
-app.use('/models', express.static('public/models', {
-    setHeaders: (res, path) => {
-        if (path.endsWith('.json')) {
-            res.setHeader('Content-Type', 'application/json');
-        } else if (path.endsWith('.shard1') || path.endsWith('.shard2')) {
-            res.setHeader('Content-Type', 'application/octet-stream');
-        }
-        res.setHeader('Access-Control-Allow-Origin', '*');
-    }
-}));
-// ============ সাইট সেটিংস API ============
 
-// সাইট সেটিংস দেখুন
-app.get('/api/site-settings', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT * FROM site_settings WHERE id = 1');
-        res.json(result.rows[0] || {});
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// অ্যাডমিন: সাইট সেটিংস আপডেট করুন
+// ============ অ্যাডমিন কন্ট্রোল API ============
 app.post('/admin/update-site-settings', authenticate, isAdmin, async (req, res) => {
     const { site_name, theme_color, face_verification_enabled, withdrawal_fee_percent } = req.body;
     
@@ -1212,7 +862,6 @@ app.post('/admin/update-site-settings', authenticate, isAdmin, async (req, res) 
     }
 });
 
-// অ্যাডমিন: প্যাকেজ মূল্য আপডেট করুন
 app.post('/admin/update-package', authenticate, isAdmin, async (req, res) => {
     const { level, price, daily_tasks, task_rate, min_withdraw } = req.body;
     
@@ -1229,7 +878,6 @@ app.post('/admin/update-package', authenticate, isAdmin, async (req, res) => {
     }
 });
 
-// অ্যাডমিন: রেফারেল কমিশন হার আপডেট করুন
 app.post('/admin/update-referral-rates', authenticate, isAdmin, async (req, res) => {
     const { gen1, gen2, gen3 } = req.body;
     
@@ -1245,7 +893,6 @@ app.post('/admin/update-referral-rates', authenticate, isAdmin, async (req, res)
     }
 });
 
-// অ্যাডমিন: ফেস ভেরিফিকেশন টগল
 app.post('/admin/toggle-face-verification', authenticate, isAdmin, async (req, res) => {
     const { enabled } = req.body;
     
@@ -1259,66 +906,7 @@ app.post('/admin/toggle-face-verification', authenticate, isAdmin, async (req, r
         res.status(500).json({ error: err.message });
     }
 });
-// ফেস ভেরিফিকেশন স্ট্যাটাস চেক API (পাবলিক)
-app.get('/api/face-verification-status', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT face_verification_enabled FROM site_settings WHERE id = 1');
-        const isEnabled = result.rows[0]?.face_verification_enabled !== false; // ডিফল্ট true
-        res.json({ enabled: isEnabled });
-    } catch (err) {
-        res.json({ enabled: true }); // error হলে ডিফল্ট true
-    }
-});
-app.post('/api/register', async (req, res) => {
-    const { username, password, mobile, referralCode, faceDescriptor } = req.body;
-    
-    try {
-        // ফেস ভেরিফিকেশন প্রয়োজন কিনা চেক করুন
-        const settings = await pool.query('SELECT face_verification_enabled FROM site_settings WHERE id = 1');
-        const faceVerificationRequired = settings.rows[0]?.face_verification_enabled !== false;
-        
-        if (faceVerificationRequired && (!faceDescriptor || faceDescriptor.length === 0)) {
-            return res.status(400).json({ error: 'ফেস ভেরিফিকেশন প্রয়োজন!' });
-        }
-        
-        // বাকি রেজিস্ট্রেশন কোড...
-        const hashed = await bcrypt.hash(password, 10);
-        
-        let refCode;
-        let isUnique = false;
-        while (!isUnique) {
-            refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-            const existing = await pool.query('SELECT id FROM users WHERE referral_code = $1', [refCode]);
-            if (existing.rows.length === 0) isUnique = true;
-        }
-        
-        let referrerId = null;
-        if (referralCode && referralCode.trim() !== '') {
-            const refUser = await pool.query('SELECT id FROM users WHERE referral_code = $1', [referralCode.toUpperCase().trim()]);
-            if (refUser.rows.length > 0) referrerId = refUser.rows[0].id;
-        }
-        
-        const result = await pool.query(
-            `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at) 
-             VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 'active', NOW()) RETURNING id`,
-            [username, hashed, mobile, refCode, referrerId]
-        );
-        
-        const userId = result.rows[0].id;
-        
-        // ফেস ভেরিফিকেশন সক্রিয় থাকলে ডেস্ক্রিপ্টর সংরক্ষণ করুন
-        if (faceVerificationRequired && faceDescriptor) {
-            await pool.query(
-                'INSERT INTO face_descriptors (user_id, descriptor) VALUES ($1, $2)',
-                [userId, JSON.stringify(faceDescriptor)]
-            );
-        }
-        
-        const token = jwt.sign({ id: userId, username }, process.env.JWT_SECRET);
-        res.json({ token, username });
-        
-    } catch (err) {
-        console.error('Registration error:', err);
-        res.status(400).json({ error: 'Username already exists or invalid data' });
-    }
-});
+
+// ============ সার্ভার স্টার্ট ============
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

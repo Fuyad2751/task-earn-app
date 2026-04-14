@@ -37,7 +37,7 @@
             </div>
             
             <!-- ফেস ভেরিফিকেশন সেকশন -->
-            <div class="bg-yellow-500/20 rounded-xl p-4">
+            <div id="faceVerificationSection" class="bg-yellow-500/20 rounded-xl p-4">
                 <p class="text-white text-sm mb-2"><i class="fas fa-face-smile mr-2"></i> ফেস ভেরিফিকেশন বাধ্যতামূলক</p>
                 <div id="cameraContainer" class="relative">
                     <video id="faceVideo" autoplay playsinline class="w-full rounded-lg bg-black" style="min-height: 200px;"></video>
@@ -53,12 +53,11 @@
                     <i class="fas fa-spinner fa-spin mr-1"></i> মডেল লোড হচ্ছে...
                 </div>
             </div>
-            <div id="faceVerificationSection" class="bg-yellow-500/20 rounded-xl p-4">
-    <!-- ফেস ভেরিফিকেশন কন্টেন্ট -->
-</div>
-<div id="faceWarning" class="bg-green-500/20 rounded-xl p-4 text-center hidden">
-    <p class="text-white"><i class="fas fa-check-circle mr-2"></i> ফেস ভেরিফিকেশন বন্ধ আছে। সরাসরি রেজিস্ট্রেশন করুন।</p>
-</div>
+            
+            <div id="faceWarning" class="bg-green-500/20 rounded-xl p-4 text-center hidden">
+                <p class="text-white"><i class="fas fa-check-circle mr-2"></i> ফেস ভেরিফিকেশন বন্ধ আছে। সরাসরি রেজিস্ট্রেশন করুন।</p>
+            </div>
+            
             <button id="registerBtn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl hover:from-yellow-500 hover:to-orange-600 transition duration-300 transform hover:scale-105 shadow-lg" disabled>
                 <i class="fas fa-user-plus mr-2"></i> রেজিস্টার করুন
             </button>
@@ -75,31 +74,25 @@
         let video = null;
         let stream = null;
         let modelsLoaded = false;
+        let isFaceRequired = true;
         
-        // ফেস মডেল লোড করুন (লোকাল পাথ ব্যবহার করে)
+        // ফেস ভেরিফিকেশন প্রয়োজন কিনা চেক করুন
+        async function checkFaceVerificationRequired() {
+            try {
+                const res = await fetch('/api/face-verification-status');
+                const data = await res.json();
+                return data.enabled === true;
+            } catch(e) {
+                console.error('Face status check error:', e);
+                return true;
+            }
+        }
+        
+        // ফেস মডেল লোড করুন
         async function loadModels() {
             try {
                 console.log('মডেল লোড শুরু...');
                 const modelsPath = '/models';
-                
-                // মডেল ফাইল চেক করুন
-                const checkFile = async (file) => {
-                    try {
-                        const res = await fetch(`${modelsPath}/${file}`);
-                        return res.ok;
-                    } catch(e) {
-                        return false;
-                    }
-                };
-                
-                const hasShard2 = await checkFile('face_recognition_model-shard2');
-                console.log('face_recognition_model-shard2 exists:', hasShard2);
-                
-                if (!hasShard2) {
-                    document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> মডেল ফাইল অনুপস্থিত!';
-                    console.error('Missing face_recognition_model-shard2');
-                    return;
-                }
                 
                 await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
                 console.log('✅ tinyFaceDetector লোডেড');
@@ -113,7 +106,7 @@
                 startWebcam();
             } catch (err) {
                 console.error('Model load error:', err);
-                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> মডেল লোড ব্যর্থ! ' + err.message;
+                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> মডেল লোড ব্যর্থ!';
             }
         }
         
@@ -138,7 +131,7 @@
                 };
             } catch (err) {
                 console.error('Webcam error:', err);
-                document.getElementById('faceStatus').innerHTML = 'ক্যামেরা অ্যাক্সেস দেওয়া হয়নি! ব্রাউজার সেটিংস চেক করুন।';
+                document.getElementById('faceStatus').innerHTML = 'ক্যামেরা অ্যাক্সেস দেওয়া হয়নি!';
             }
         }
         
@@ -150,7 +143,7 @@
             }
             
             if (!video || !video.videoWidth || video.videoWidth === 0) {
-                alert('ক্যামেরা শুরু হয়নি! পেজ রিফ্রেশ করে আবার চেষ্টা করুন।');
+                alert('ক্যামেরা শুরু হয়নি!');
                 return;
             }
             
@@ -163,7 +156,7 @@
                     .withFaceDescriptor();
                 
                 if (!detection) {
-                    alert('মুখ শনাক্ত করা যায়নি! ভালো আলোতে সোজা হয়ে বসুন এবং চোখ খোলা রাখুন।');
+                    alert('মুখ শনাক্ত করা যায়নি! ভালো আলোতে সোজা হয়ে বসুন।');
                     document.getElementById('faceStatus').innerHTML = 'মুখ শনাক্ত করা যায়নি, আবার চেষ্টা করুন';
                     document.getElementById('captureFaceBtn').disabled = false;
                     return;
@@ -181,7 +174,7 @@
                 
             } catch (err) {
                 console.error('Face capture error:', err);
-                alert('ফেস ক্যাপচার করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+                alert('ফেস ক্যাপচার করতে সমস্যা হয়েছে।');
                 document.getElementById('faceStatus').innerHTML = 'ত্রুটি, আবার চেষ্টা করুন';
                 document.getElementById('captureFaceBtn').disabled = false;
             }
@@ -204,7 +197,7 @@
                 return;
             }
             
-            if (!faceCaptured || !faceDescriptor) {
+            if (isFaceRequired && (!faceCaptured || !faceDescriptor)) {
                 alert('দয়া করে ফেস ক্যাপচার করুন!');
                 return;
             }
@@ -214,16 +207,21 @@
             registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> রেজিস্ট্রেশন হচ্ছে...';
 
             try {
+                const bodyData = { 
+                    username, 
+                    password, 
+                    mobile, 
+                    referralCode: refCode
+                };
+                
+                if (isFaceRequired && faceDescriptor) {
+                    bodyData.faceDescriptor = faceDescriptor;
+                }
+                
                 const res = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        username, 
-                        password, 
-                        mobile, 
-                        referralCode: refCode,
-                        faceDescriptor: faceDescriptor
-                    })
+                    body: JSON.stringify(bodyData)
                 });
 
                 const data = await res.json();
@@ -233,7 +231,7 @@
                     alert('রেজিস্ট্রেশন সফল!');
                     window.location.href = 'dashboard-home.html';
                 } else {
-                    alert(data.error || 'ইউজারনেম আগে থেকেই আছে বা ফেস ভেরিফিকেশন ব্যর্থ');
+                    alert(data.error || 'ইউজারনেম আগে থেকেই আছে');
                     registerBtn.disabled = false;
                     registerBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i> রেজিস্টার করুন';
                 }
@@ -252,39 +250,30 @@
         });
         
         // পেজ লোড হলে
-        loadModels();
+        async function init() {
+            isFaceRequired = await checkFaceVerificationRequired();
+            
+            const faceSection = document.getElementById('faceVerificationSection');
+            const faceWarning = document.getElementById('faceWarning');
+            const registerBtn = document.getElementById('registerBtn');
+            
+            if (!isFaceRequired) {
+                // ফেস ভেরিফিকেশন বন্ধ
+                faceSection.style.display = 'none';
+                faceWarning.classList.remove('hidden');
+                registerBtn.disabled = false;
+            } else {
+                // ফেস ভেরিফিকেশন চালু
+                faceSection.style.display = 'block';
+                faceWarning.classList.add('hidden');
+                loadModels();
+            }
+        }
+        
+        init();
         
         document.getElementById('captureFaceBtn').onclick = captureFace;
         document.getElementById('registerBtn').onclick = register;
-            // ফেস ভেরিফিকেশন প্রয়োজন কিনা চেক করুন
-async function checkFaceVerificationRequired() {
-    try {
-        const res = await fetch('/api/face-verification-status');
-        const data = await res.json();
-        return data.enabled;
-    } catch(e) {
-        return true; // error হলে ডিফল্ট true
-    }
-}
-
-// পেজ লোড হলে চেক করুন
-async function initPage() {
-    const isFaceRequired = await checkFaceVerificationRequired();
-    const faceSection = document.getElementById('faceVerificationSection');
-    const faceWarning = document.getElementById('faceWarning');
-    
-    if (!isFaceRequired) {
-        // ফেস ভেরিফিকেশন বন্ধ থাকলে সেকশন লুকান
-        if (faceSection) faceSection.style.display = 'none';
-        if (faceWarning) faceWarning.style.display = 'block';
-        document.getElementById('registerBtn').disabled = false;
-    } else {
-        // ফেস ভেরিফিকেশন চালু থাকলে সেকশন দেখান
-        if (faceSection) faceSection.style.display = 'block';
-        if (faceWarning) faceWarning.style.display = 'none';
-        loadModels(); // মডেল লোড করুন
-    }
-}
     </script>
 </body>
 </html>
