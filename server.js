@@ -1259,3 +1259,66 @@ app.post('/admin/toggle-face-verification', authenticate, isAdmin, async (req, r
         res.status(500).json({ error: err.message });
     }
 });
+// ফেস ভেরিফিকেশন স্ট্যাটাস চেক API (পাবলিক)
+app.get('/api/face-verification-status', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT face_verification_enabled FROM site_settings WHERE id = 1');
+        const isEnabled = result.rows[0]?.face_verification_enabled !== false; // ডিফল্ট true
+        res.json({ enabled: isEnabled });
+    } catch (err) {
+        res.json({ enabled: true }); // error হলে ডিফল্ট true
+    }
+});
+app.post('/api/register', async (req, res) => {
+    const { username, password, mobile, referralCode, faceDescriptor } = req.body;
+    
+    try {
+        // ফেস ভেরিফিকেশন প্রয়োজন কিনা চেক করুন
+        const settings = await pool.query('SELECT face_verification_enabled FROM site_settings WHERE id = 1');
+        const faceVerificationRequired = settings.rows[0]?.face_verification_enabled !== false;
+        
+        if (faceVerificationRequired && (!faceDescriptor || faceDescriptor.length === 0)) {
+            return res.status(400).json({ error: 'ফেস ভেরিফিকেশন প্রয়োজন!' });
+        }
+        
+        // বাকি রেজিস্ট্রেশন কোড...
+        const hashed = await bcrypt.hash(password, 10);
+        
+        let refCode;
+        let isUnique = false;
+        while (!isUnique) {
+            refCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            const existing = await pool.query('SELECT id FROM users WHERE referral_code = $1', [refCode]);
+            if (existing.rows.length === 0) isUnique = true;
+        }
+        
+        let referrerId = null;
+        if (referralCode && referralCode.trim() !== '') {
+            const refUser = await pool.query('SELECT id FROM users WHERE referral_code = $1', [referralCode.toUpperCase().trim()]);
+            if (refUser.rows.length > 0) referrerId = refUser.rows[0].id;
+        }
+        
+        const result = await pool.query(
+            `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at) 
+             VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 'active', NOW()) RETURNING id`,
+            [username, hashed, mobile, refCode, referrerId]
+        );
+        
+        const userId = result.rows[0].id;
+        
+        // ফেস ভেরিফিকেশন সক্রিয় থাকলে ডেস্ক্রিপ্টর সংরক্ষণ করুন
+        if (faceVerificationRequired && faceDescriptor) {
+            await pool.query(
+                'INSERT INTO face_descriptors (user_id, descriptor) VALUES ($1, $2)',
+                [userId, JSON.stringify(faceDescriptor)]
+            );
+        }
+        
+        const token = jwt.sign({ id: userId, username }, process.env.JWT_SECRET);
+        res.json({ token, username });
+        
+    } catch (err) {
+        console.error('Registration error:', err);
+        res.status(400).json({ error: 'Username already exists or invalid data' });
+    }
+});

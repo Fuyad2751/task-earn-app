@@ -53,7 +53,12 @@
                     <i class="fas fa-spinner fa-spin mr-1"></i> মডেল লোড হচ্ছে...
                 </div>
             </div>
-            
+            <div id="faceVerificationSection" class="bg-yellow-500/20 rounded-xl p-4">
+    <!-- ফেস ভেরিফিকেশন কন্টেন্ট -->
+</div>
+<div id="faceWarning" class="bg-green-500/20 rounded-xl p-4 text-center hidden">
+    <p class="text-white"><i class="fas fa-check-circle mr-2"></i> ফেস ভেরিফিকেশন বন্ধ আছে। সরাসরি রেজিস্ট্রেশন করুন।</p>
+</div>
             <button id="registerBtn" class="w-full bg-gradient-to-r from-yellow-400 to-orange-500 text-white font-bold py-3 rounded-xl hover:from-yellow-500 hover:to-orange-600 transition duration-300 transform hover:scale-105 shadow-lg" disabled>
                 <i class="fas fa-user-plus mr-2"></i> রেজিস্টার করুন
             </button>
@@ -251,6 +256,35 @@
         
         document.getElementById('captureFaceBtn').onclick = captureFace;
         document.getElementById('registerBtn').onclick = register;
+            // ফেস ভেরিফিকেশন প্রয়োজন কিনা চেক করুন
+async function checkFaceVerificationRequired() {
+    try {
+        const res = await fetch('/api/face-verification-status');
+        const data = await res.json();
+        return data.enabled;
+    } catch(e) {
+        return true; // error হলে ডিফল্ট true
+    }
+}
+
+// পেজ লোড হলে চেক করুন
+async function initPage() {
+    const isFaceRequired = await checkFaceVerificationRequired();
+    const faceSection = document.getElementById('faceVerificationSection');
+    const faceWarning = document.getElementById('faceWarning');
+    
+    if (!isFaceRequired) {
+        // ফেস ভেরিফিকেশন বন্ধ থাকলে সেকশন লুকান
+        if (faceSection) faceSection.style.display = 'none';
+        if (faceWarning) faceWarning.style.display = 'block';
+        document.getElementById('registerBtn').disabled = false;
+    } else {
+        // ফেস ভেরিফিকেশন চালু থাকলে সেকশন দেখান
+        if (faceSection) faceSection.style.display = 'block';
+        if (faceWarning) faceWarning.style.display = 'none';
+        loadModels(); // মডেল লোড করুন
+    }
+}
     </script>
 </body>
 </html>
