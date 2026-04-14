@@ -24,9 +24,17 @@
             display: inline-block;
             padding-right: 2rem;
         }
+        .expiry-warning {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-20">
+
     <!-- Header -->
     <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
@@ -46,6 +54,22 @@
     </header>
 
     <div class="container mx-auto px-4 py-6">
+        
+        <!-- 🔔 নোটিফিকেশন সেকশন -->
+        <div id="notificationArea" class="mb-6 space-y-2"></div>
+
+        <!-- ⚠️ প্যাকেজ মেয়াদ শেষ হওয়ার সতর্কতা -->
+        <div id="expiryWarning" class="hidden mb-6 bg-red-500/20 border border-red-500 rounded-xl p-4">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-exclamation-triangle text-red-400 text-2xl"></i>
+                <div>
+                    <p class="text-red-400 font-bold">আপনার প্যাকেজের মেয়াদ প্রায় শেষ!</p>
+                    <p class="text-white text-sm" id="expiryMessage"></p>
+                </div>
+                <a href="packages.html" class="ml-auto bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">আপগ্রেড করুন</a>
+            </div>
+        </div>
+
         <!-- Welcome Card -->
         <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl p-6 text-white mb-8 shadow-xl">
             <div class="flex justify-between items-center">
@@ -58,8 +82,7 @@
                 </div>
             </div>
         </div>
-        <!-- নোটিফিকেশন সেকশন -->
-        <div id="notificationArea" class="mb-6 space-y-2"></div>
+
         <!-- Stats Cards -->
         <div class="grid grid-cols-2 gap-4 mb-8">
             <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center border border-white/20">
@@ -73,7 +96,24 @@
                 <p class="text-white text-xl font-bold" id="userLevel">১</p>
             </div>
         </div>
-        
+
+        <!-- প্যাকেজ মেয়াদ তথ্য -->
+        <div class="bg-white/10 backdrop-blur rounded-xl p-4 mb-8 border border-white/20">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-300 text-sm">বর্তমান প্যাকেজ</p>
+                    <p class="text-white font-bold text-lg">লেভেল <span id="currentPackageLevel">১</span></p>
+                </div>
+                <div>
+                    <p class="text-gray-300 text-sm">মেয়াদ বাকি</p>
+                    <p class="text-white font-bold text-lg" id="packageExpiryDays">আজীবন</p>
+                </div>
+                <a href="packages.html" class="bg-yellow-500 text-white px-4 py-2 rounded-lg hover:bg-yellow-600 transition text-sm">
+                    <i class="fas fa-gem mr-1"></i> আপগ্রেড
+                </a>
+            </div>
+        </div>
+
         <!-- Features Section -->
         <div class="mb-8">
             <h2 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
@@ -149,33 +189,27 @@
     <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
         <a href="dashboard-home.html" class="flex flex-col items-center text-yellow-400">
-            <i class="fas fa-home text-xl"></i>
-            <span class="text-xs">হোম</span>
+            <i class="fas fa-home text-xl"></i><span class="text-xs">হোম</span>
         </a>
         <a href="task-video.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-            <i class="fas fa-play-circle text-xl"></i>
-            <span class="text-xs">টাস্ক</span>
+            <i class="fas fa-play-circle text-xl"></i><span class="text-xs">টাস্ক</span>
         </a>
         <a href="packages.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-            <i class="fas fa-box text-xl"></i>
-            <span class="text-xs">প্যাকেজ</span>
+            <i class="fas fa-box text-xl"></i><span class="text-xs">প্যাকেজ</span>
         </a>
         <a href="withdraw.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-            <i class="fas fa-wallet text-xl"></i>
-            <span class="text-xs">উত্তোলন</span>
+            <i class="fas fa-wallet text-xl"></i><span class="text-xs">উত্তোলন</span>
         </a>
         <a href="profile.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400">
-            <i class="fas fa-user text-xl"></i>
-            <span class="text-xs">প্রোফাইল</span>
+            <i class="fas fa-user text-xl"></i><span class="text-xs">প্রোফাইল</span>
         </a>
     </nav>
 
     <script>
         const token = localStorage.getItem('authToken');
-        if (!token) {
-            window.location.href = 'login.html';
-        }
+        if (!token) window.location.href = 'login.html';
 
+        // লোড প্রোফাইল
         async function loadProfile() {
             const res = await fetch('/api/profile', {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -185,13 +219,64 @@
                 document.getElementById('userName').innerText = data.username;
                 document.getElementById('userBalance').innerText = data.balance;
                 document.getElementById('userLevel').innerText = data.level;
+                document.getElementById('currentPackageLevel').innerText = data.level;
                 document.getElementById('todayEarn').innerText = data.total_earnings || '0';
+                await loadPackageExpiry(data.level);
             } else {
                 localStorage.removeItem('authToken');
                 window.location.href = 'login.html';
             }
         }
 
+        // প্যাকেজ মেয়াদ চেক করুন
+        async function loadPackageExpiry(level) {
+            try {
+                const res = await fetch('/api/packages');
+                const packages = await res.json();
+                const currentPackage = packages.find(p => p.level == level);
+                if (currentPackage && currentPackage.expiry_days && currentPackage.expiry_days > 0) {
+                    // ইউজারের প্যাকেজ কেনার তারিখ দরকার (ডাটাবেসে থাকলে)
+                    document.getElementById('packageExpiryDays').innerHTML = `${currentPackage.expiry_days} দিন বাকি`;
+                } else {
+                    document.getElementById('packageExpiryDays').innerHTML = 'আজীবন';
+                }
+            } catch(e) {
+                console.log('Expiry check error:', e);
+            }
+        }
+
+        // নোটিফিকেশন লোড
+        async function loadNotifications() {
+            try {
+                const res = await fetch('/api/my-notifications', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const notifications = await res.json();
+                const container = document.getElementById('notificationArea');
+                if (container) {
+                    if (notifications.length === 0) {
+                        container.innerHTML = '<div class="text-center text-gray-400 py-2">কোনো নতুন বিজ্ঞপ্তি নেই</div>';
+                    } else {
+                        container.innerHTML = notifications.map(n => `
+                            <div class="bg-yellow-500/20 border border-yellow-500 rounded-xl p-3">
+                                <div class="flex items-start gap-2">
+                                    <i class="fas fa-bell text-yellow-400 mt-0.5"></i>
+                                    <div class="flex-1">
+                                        <p class="text-yellow-400 font-bold text-sm">${n.title || 'নতুন বিজ্ঞপ্তি'}</p>
+                                        <p class="text-white text-sm">${n.message}</p>
+                                        <p class="text-gray-400 text-xs mt-1">${new Date(n.created_at).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            } catch(e) {
+                console.log('Notification error:', e);
+            }
+        }
+
+        // লাইভ উত্তোলন লোড
         async function loadLiveWithdrawals() {
             try {
                 const res = await fetch('/api/live-withdrawals');
@@ -209,30 +294,10 @@
         }
 
         loadProfile();
+        loadNotifications();
         loadLiveWithdrawals();
         setInterval(loadLiveWithdrawals, 30000);
-        setInterval(loadProfile, 60000);
-        // নোটিফিকেশন লোড করুন
-async function loadNotifications() {
-    try {
-        const res = await fetch('/api/my-notifications', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const notifications = await res.json();
-        const container = document.getElementById('notificationArea');
-        if (container && notifications.length > 0) {
-            container.innerHTML = notifications.map(n => `
-                <div class="bg-yellow-500/20 border border-yellow-500 rounded-xl p-3">
-                    <p class="text-yellow-400 font-bold text-sm">${n.title || 'নতুন বিজ্ঞপ্তি'}</p>
-                    <p class="text-white text-sm">${n.message}</p>
-                    <p class="text-gray-400 text-xs mt-1">${new Date(n.created_at).toLocaleString()}</p>
-                </div>
-            `).join('');
-        }
-    } catch(e) { console.log('Notification error:', e); }
-}
-
-        // loadProfile() এর পরে loadNotifications() কল করুন
+        setInterval(loadNotifications, 60000);
     </script>
 </body>
 </html>
