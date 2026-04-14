@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <script src="/face-verify.js"></script>
 </head>
 <body class="bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600 min-h-screen flex items-center justify-center p-4">
     <div class="bg-white/10 backdrop-blur-lg rounded-3xl shadow-2xl p-8 w-full max-w-md border border-white/20">
@@ -40,15 +39,19 @@
             <!-- ফেস ভেরিফিকেশন সেকশন -->
             <div class="bg-yellow-500/20 rounded-xl p-4">
                 <p class="text-white text-sm mb-2"><i class="fas fa-face-smile mr-2"></i> ফেস ভেরিফিকেশন বাধ্যতামূলক</p>
-                <div class="relative">
-                    <video id="faceVideo" autoplay playsinline class="w-full rounded-lg bg-black"></video>
+                <div id="cameraContainer" class="relative">
+                    <video id="faceVideo" autoplay playsinline class="w-full rounded-lg bg-black" style="min-height: 200px;"></video>
+                    <canvas id="faceCanvas" style="display: none;"></canvas>
                     <div id="faceStatus" class="absolute bottom-2 left-0 right-0 text-center text-white text-xs bg-black/50 p-1 rounded">ক্যামেরা চালু হচ্ছে...</div>
                 </div>
-                <button type="button" id="captureFaceBtn" class="mt-2 w-full bg-purple-600 text-white font-bold py-2 rounded-xl hover:bg-purple-700 transition">
+                <button type="button" id="captureFaceBtn" class="mt-2 w-full bg-purple-600 text-white font-bold py-2 rounded-xl hover:bg-purple-700 transition" disabled>
                     <i class="fas fa-camera mr-2"></i> ফেস ক্যাপচার করুন
                 </button>
                 <div id="faceCapturedStatus" class="text-center text-green-400 text-sm mt-2 hidden">
                     <i class="fas fa-check-circle mr-1"></i> ফেস ক্যাপচার করা হয়েছে
+                </div>
+                <div id="loadingStatus" class="text-center text-yellow-400 text-sm mt-2">
+                    <i class="fas fa-spinner fa-spin mr-1"></i> মডেল লোড হচ্ছে...
                 </div>
             </div>
             
@@ -67,62 +70,108 @@
         let faceCaptured = false;
         let video = null;
         let stream = null;
+        let modelsLoaded = false;
         
         // ফেস মডেল লোড করুন
         async function loadModels() {
-            const modelsPath = '/models';
-            await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
-            await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
-            await faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath);
-            console.log('✅ ফেস মডেল লোডেড');
-            startWebcam();
+            try {
+                const modelsPath = '/models';
+                await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
+                await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
+                await faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath);
+                console.log('✅ ফেস মডেল লোডেড');
+                modelsLoaded = true;
+                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-check-circle mr-1"></i> মডেল লোড সম্পন্ন';
+                startWebcam();
+            } catch (err) {
+                console.error('Model load error:', err);
+                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> মডেল লোড ব্যর্থ! পেজ রিফ্রেশ করুন।';
+            }
         }
         
         // ওয়েবক্যাম শুরু করুন
         async function startWebcam() {
-            video = document.getElementById('faceVideo');
-            stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                video.play();
-                document.getElementById('faceStatus').innerText = 'মুখ ক্যামেরার সামনে রাখুন';
-            };
+            try {
+                const videoElement = document.getElementById('faceVideo');
+                stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { 
+                        width: { ideal: 400 },
+                        height: { ideal: 300 },
+                        facingMode: 'user'
+                    } 
+                });
+                videoElement.srcObject = stream;
+                videoElement.onloadedmetadata = () => {
+                    videoElement.play();
+                    document.getElementById('faceStatus').innerHTML = 'মুখ ক্যামেরার সামনে রাখুন';
+                    document.getElementById('captureFaceBtn').disabled = false;
+                };
+            } catch (err) {
+                console.error('Webcam error:', err);
+                document.getElementById('faceStatus').innerHTML = 'ক্যামেরা অ্যাক্সেস দেওয়া হয়নি! ব্রাউজার সেটিংস চেক করুন।';
+                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> ক্যামেরা প্রয়োজন!';
+            }
         }
         
         // ফেস ক্যাপচার করুন
         async function captureFace() {
-            if (!video) {
-                alert('ক্যামেরা শুরু হয়নি');
+            if (!modelsLoaded) {
+                alert('মডেল লোড হচ্ছে, একটু অপেক্ষা করুন...');
                 return;
             }
             
-            const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-                .withFaceLandmarks()
-                .withFaceDescriptor();
-            
-            if (!detection) {
-                alert('মুখ শনাক্ত করা যায়নি! ভালো আলোতে সোজা হয়ে বসুন।');
+            if (!video || !video.videoWidth || video.videoWidth === 0) {
+                alert('ক্যামেরা শুরু হয়নি! পেজ রিফ্রেশ করে আবার চেষ্টা করুন।');
                 return;
             }
             
-            faceDescriptor = Array.from(detection.descriptor);
-            faceCaptured = true;
+            document.getElementById('faceStatus').innerHTML = 'ফেস স্ক্যান করা হচ্ছে...';
+            document.getElementById('captureFaceBtn').disabled = true;
             
-            document.getElementById('faceCapturedStatus').classList.remove('hidden');
-            document.getElementById('registerBtn').disabled = false;
-            document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-check-circle mr-2"></i> ফেস ক্যাপচার করা হয়েছে';
-            document.getElementById('captureFaceBtn').classList.add('bg-green-600');
+            try {
+                const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
+                    .withFaceLandmarks()
+                    .withFaceDescriptor();
+                
+                if (!detection) {
+                    alert('মুখ শনাক্ত করা যায়নি! ভালো আলোতে সোজা হয়ে বসুন এবং চোখ খোলা রাখুন।');
+                    document.getElementById('faceStatus').innerHTML = 'মুখ শনাক্ত করা যায়নি, আবার চেষ্টা করুন';
+                    document.getElementById('captureFaceBtn').disabled = false;
+                    return;
+                }
+                
+                faceDescriptor = Array.from(detection.descriptor);
+                faceCaptured = true;
+                
+                document.getElementById('faceCapturedStatus').classList.remove('hidden');
+                document.getElementById('registerBtn').disabled = false;
+                document.getElementById('captureFaceBtn').innerHTML = '<i class="fas fa-check-circle mr-2"></i> ফেস ক্যাপচার করা হয়েছে';
+                document.getElementById('captureFaceBtn').classList.add('bg-green-600');
+                document.getElementById('captureFaceBtn').classList.remove('bg-purple-600');
+                document.getElementById('faceStatus').innerHTML = '✅ ফেস ক্যাপচার সম্পন্ন!';
+                
+            } catch (err) {
+                console.error('Face capture error:', err);
+                alert('ফেস ক্যাপচার করতে সমস্যা হয়েছে। আবার চেষ্টা করুন।');
+                document.getElementById('faceStatus').innerHTML = 'ত্রুটি, আবার চেষ্টা করুন';
+                document.getElementById('captureFaceBtn').disabled = false;
+            }
         }
         
         // রেজিস্ট্রেশন
         async function register() {
-            const username = document.getElementById('username').value;
+            const username = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const mobile = document.getElementById('mobile').value;
-            const refCode = document.getElementById('refCode').value;
+            const mobile = document.getElementById('mobile').value.trim();
+            const refCode = document.getElementById('refCode').value.trim();
 
             if (!username || !password || !mobile) {
                 alert('সব ঘর পূরণ করুন!');
+                return;
+            }
+            
+            if (password.length < 4) {
+                alert('পাসওয়ার্ড কমপক্ষে 4 অক্ষরের হতে হবে!');
                 return;
             }
             
@@ -131,28 +180,47 @@
                 return;
             }
 
-            const res = await fetch('/api/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    username, 
-                    password, 
-                    mobile, 
-                    referralCode: refCode,
-                    faceDescriptor: faceDescriptor
-                })
-            });
+            const registerBtn = document.getElementById('registerBtn');
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> রেজিস্ট্রেশন হচ্ছে...';
 
-            if (res.ok) {
+            try {
+                const res = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        username, 
+                        password, 
+                        mobile, 
+                        referralCode: refCode,
+                        faceDescriptor: faceDescriptor
+                    })
+                });
+
                 const data = await res.json();
-                localStorage.setItem('authToken', data.token);
-                alert('রেজিস্ট্রেশন সফল!');
-                window.location.href = 'dashboard-home.html';
-            } else {
-                const error = await res.json();
-                alert(error.error || 'ইউজারনেম আগে থেকেই আছে বা ফেস ভেরিফিকেশন ব্যর্থ');
+                
+                if (res.ok) {
+                    localStorage.setItem('authToken', data.token);
+                    alert('রেজিস্ট্রেশন সফল!');
+                    window.location.href = 'dashboard-home.html';
+                } else {
+                    alert(data.error || 'ইউজারনেম আগে থেকেই আছে বা ফেস ভেরিফিকেশন ব্যর্থ');
+                    registerBtn.disabled = false;
+                    registerBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i> রেজিস্টার করুন';
+                }
+            } catch (err) {
+                alert('সার্ভারে সমস্যা, পরে আবার চেষ্টা করুন');
+                registerBtn.disabled = false;
+                registerBtn.innerHTML = '<i class="fas fa-user-plus mr-2"></i> রেজিস্টার করুন';
             }
         }
+        
+        // পেজ আনলোড হলে ক্যামেরা বন্ধ করুন
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
         
         // পেজ লোড হলে
         loadModels();
