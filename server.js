@@ -1179,3 +1179,83 @@ app.use('/models', express.static('public/models', {
         res.setHeader('Access-Control-Allow-Origin', '*');
     }
 }));
+// ============ সাইট সেটিংস API ============
+
+// সাইট সেটিংস দেখুন
+app.get('/api/site-settings', async (req, res) => {
+    try {
+        const result = await pool.query('SELECT * FROM site_settings WHERE id = 1');
+        res.json(result.rows[0] || {});
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// অ্যাডমিন: সাইট সেটিংস আপডেট করুন
+app.post('/admin/update-site-settings', authenticate, isAdmin, async (req, res) => {
+    const { site_name, theme_color, face_verification_enabled, withdrawal_fee_percent } = req.body;
+    
+    try {
+        await pool.query(
+            `UPDATE site_settings 
+             SET site_name = COALESCE($1, site_name),
+                 theme_color = COALESCE($2, theme_color),
+                 face_verification_enabled = COALESCE($3, face_verification_enabled),
+                 withdrawal_fee_percent = COALESCE($4, withdrawal_fee_percent),
+                 updated_at = NOW()
+             WHERE id = 1`,
+            [site_name, theme_color, face_verification_enabled, withdrawal_fee_percent]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// অ্যাডমিন: প্যাকেজ মূল্য আপডেট করুন
+app.post('/admin/update-package', authenticate, isAdmin, async (req, res) => {
+    const { level, price, daily_tasks, task_rate, min_withdraw } = req.body;
+    
+    try {
+        await pool.query(
+            `UPDATE level_packages 
+             SET price = $1, daily_tasks = $2, task_rate = $3, min_withdraw = $4 
+             WHERE level = $5`,
+            [price, daily_tasks, task_rate, min_withdraw, level]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// অ্যাডমিন: রেফারেল কমিশন হার আপডেট করুন
+app.post('/admin/update-referral-rates', authenticate, isAdmin, async (req, res) => {
+    const { gen1, gen2, gen3 } = req.body;
+    
+    try {
+        const rates = JSON.stringify({ gen1: parseFloat(gen1), gen2: parseFloat(gen2), gen3: parseFloat(gen3) });
+        await pool.query(
+            `UPDATE site_settings SET referral_rates = $1, updated_at = NOW() WHERE id = 1`,
+            [rates]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// অ্যাডমিন: ফেস ভেরিফিকেশন টগল
+app.post('/admin/toggle-face-verification', authenticate, isAdmin, async (req, res) => {
+    const { enabled } = req.body;
+    
+    try {
+        await pool.query(
+            `UPDATE site_settings SET face_verification_enabled = $1, updated_at = NOW() WHERE id = 1`,
+            [enabled]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});

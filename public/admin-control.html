@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>অ্যাডমিন কন্ট্রোল - টাস্ক কিং</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <style>
+        .setting-card {
+            transition: all 0.3s ease;
+        }
+        .setting-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
+
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-sliders-h text-2xl"></i>
+                <span class="text-xl font-bold">অ্যাডমিন কন্ট্রোল প্যানেল</span>
+            </div>
+            <div class="flex gap-3">
+                <a href="admin.html" class="text-white/80 hover:text-white transition">
+                    <i class="fas fa-arrow-left mr-1"></i> প্যানেলে ফিরুন
+                </a>
+                <button onclick="logout()" class="text-white/80 hover:text-white transition">
+                    <i class="fas fa-sign-out-alt mr-1"></i> লগআউট
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-6 max-w-5xl">
+        
+        <!-- সাইট সেটিংস -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
+                <i class="fas fa-globe mr-2 text-yellow-400"></i> সাইট সেটিংস
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-gray-300 mb-2">সাইটের নাম</label>
+                    <input type="text" id="siteName" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-2">থিম কালার (হেডার)</label>
+                    <div class="flex items-center gap-2">
+                        <input type="color" id="themeColor" class="w-12 h-10 rounded-lg bg-white/10 border border-white/20 cursor-pointer">
+                        <input type="text" id="themeColorHex" class="flex-1 px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-2">উত্তোলন ফি (%)</label>
+                    <input type="number" id="withdrawFee" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-2">ন্যূনতম উত্তোলন (ডিফল্ট)</label>
+                    <input type="number" id="defaultMinWithdraw" step="50" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                </div>
+            </div>
+            <div class="mt-4 flex gap-3">
+                <button onclick="updateSiteSettings()" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-save mr-2"></i> সাইট সেটিংস সেভ করুন
+                </button>
+                <button onclick="loadSiteSettings()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-sync-alt mr-2"></i> রিফ্রেশ
+                </button>
+            </div>
+            <div id="siteSettingsMsg" class="mt-3 text-sm hidden"></div>
+        </div>
+
+        <!-- প্যাকেজ ম্যানেজমেন্ট -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
+                <i class="fas fa-box mr-2 text-green-400"></i> প্যাকেজ ম্যানেজমেন্ট
+            </h2>
+            <div class="overflow-x-auto">
+                <table class="w-full text-white text-sm">
+                    <thead class="bg-white/20">
+                        <tr>
+                            <th class="px-3 py-2 text-left">লেভেল</th>
+                            <th class="px-3 py-2 text-left">মূল্য (টাকা)</th>
+                            <th class="px-3 py-2 text-left">দৈনিক টাস্ক</th>
+                            <th class="px-3 py-2 text-left">টাস্ক রেট</th>
+                            <th class="px-3 py-2 text-left">ন্যূনতম উত্তোলন</th>
+                            <th class="px-3 py-2 text-left">অ্যাকশন</th>
+                        </tr>
+                    </thead>
+                    <tbody id="packagesList"></tbody>
+                </table>
+            </div>
+            <div id="packageMsg" class="mt-3 text-sm hidden"></div>
+        </div>
+
+        <!-- রেফারেল কমিশন সেটিংস -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
+                <i class="fas fa-users mr-2 text-purple-400"></i> রেফারেল কমিশন হার
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-gray-300 mb-2">১ম জেনারেশন (%)</label>
+                    <input type="number" id="gen1Rate" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <p class="text-gray-500 text-xs mt-1">প্যাকেজ: 10% | টাস্ক: 5%</p>
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-2">২য় জেনারেশন (%)</label>
+                    <input type="number" id="gen2Rate" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <p class="text-gray-500 text-xs mt-1">প্যাকেজ: 5% | টাস্ক: 2%</p>
+                </div>
+                <div>
+                    <label class="block text-gray-300 mb-2">৩য় জেনারেশন (%)</label>
+                    <input type="number" id="gen3Rate" step="0.5" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <p class="text-gray-500 text-xs mt-1">প্যাকেজ: 2% | টাস্ক: 1%</p>
+                </div>
+            </div>
+            <div class="mt-4 flex gap-3">
+                <button onclick="updateReferralRates()" class="bg-purple-600 text-white px-5 py-2 rounded-lg hover:bg-purple-700 transition">
+                    <i class="fas fa-save mr-2"></i> কমিশন হার সেভ করুন
+                </button>
+                <button onclick="loadReferralRates()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-sync-alt mr-2"></i> রিফ্রেশ
+                </button>
+            </div>
+            <div id="referralMsg" class="mt-3 text-sm hidden"></div>
+        </div>
+
+        <!-- ফেস ভেরিফিকেশন কন্ট্রোল -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 mb-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
+                <i class="fas fa-face-smile mr-2 text-yellow-400"></i> ফেস ভেরিফিকেশন কন্ট্রোল
+            </h2>
+            <div class="flex items-center justify-between flex-wrap gap-4">
+                <div>
+                    <p class="text-white mb-1">নতুন ইউজারদের জন্য ফেস ভেরিফিকেশন</p>
+                    <p class="text-gray-400 text-sm">সক্রিয় থাকলে রেজিস্ট্রেশনের সময় ফেস ভেরিফিকেশন বাধ্যতামূলক হবে</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="faceToggle" class="sr-only peer" onchange="toggleFaceVerification()">
+                    <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-checked:bg-green-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full"></div>
+                    <span id="faceToggleText" class="ml-3 text-white">নিষ্ক্রিয়</span>
+                </label>
+            </div>
+            <div id="faceMsg" class="mt-3 text-sm hidden"></div>
+        </div>
+
+        <!-- ইউজার ম্যানেজমেন্ট লিংক -->
+        <div class="setting-card bg-white/10 backdrop-blur rounded-2xl p-6 border border-white/20">
+            <h2 class="text-xl font-bold text-white mb-4 border-b border-white/20 pb-2">
+                <i class="fas fa-user-cog mr-2 text-blue-400"></i> ইউজার ম্যানেজমেন্ট
+            </h2>
+            <div class="flex flex-wrap gap-3">
+                <a href="admin.html" class="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition">
+                    <i class="fas fa-users mr-2"></i> সম্পূর্ণ ইউজার ম্যানেজমেন্টে যান
+                </a>
+                <button onclick="location.reload()" class="bg-gray-600 text-white px-5 py-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-sync-alt mr-2"></i> পেজ রিফ্রেশ
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            window.location.href = 'index.html';
+        }
+
+        function showMessage(elementId, message, isError = false) {
+            const msgDiv = document.getElementById(elementId);
+            msgDiv.className = `mt-3 text-sm ${isError ? 'text-red-400' : 'text-green-400'} bg-${isError ? 'red' : 'green'}-500/20 p-2 rounded-lg`;
+            msgDiv.innerHTML = `<i class="fas ${isError ? 'fa-exclamation-triangle' : 'fa-check-circle'} mr-2"></i> ${message}`;
+            msgDiv.classList.remove('hidden');
+            setTimeout(() => {
+                msgDiv.classList.add('hidden');
+            }, 3000);
+        }
+
+        // সাইট সেটিংস লোড
+        async function loadSiteSettings() {
+            try {
+                const res = await fetch('/api/site-settings');
+                const data = await res.json();
+                document.getElementById('siteName').value = data.site_name || 'টাস্ক কিং';
+                document.getElementById('themeColor').value = data.theme_color || '#3b82f6';
+                document.getElementById('themeColorHex').value = data.theme_color || '#3b82f6';
+                document.getElementById('withdrawFee').value = data.withdrawal_fee_percent || 10;
+                document.getElementById('defaultMinWithdraw').value = data.default_min_withdraw || 350;
+                document.getElementById('faceToggle').checked = data.face_verification_enabled || false;
+                document.getElementById('faceToggleText').innerText = data.face_verification_enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়';
+            } catch(e) {
+                console.error('Error loading site settings:', e);
+            }
+        }
+
+        // সাইট সেটিংস আপডেট
+        async function updateSiteSettings() {
+            const site_name = document.getElementById('siteName').value;
+            const theme_color = document.getElementById('themeColor').value;
+            const withdrawal_fee_percent = parseFloat(document.getElementById('withdrawFee').value);
+            const default_min_withdraw = parseFloat(document.getElementById('defaultMinWithdraw').value);
+            
+            try {
+                const res = await fetch('/admin/update-site-settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ site_name, theme_color, withdrawal_fee_percent, default_min_withdraw })
+                });
+                if (res.ok) {
+                    showMessage('siteSettingsMsg', 'সাইট সেটিংস সফলভাবে আপডেট করা হয়েছে!');
+                } else {
+                    showMessage('siteSettingsMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
+                }
+            } catch(e) {
+                showMessage('siteSettingsMsg', e.message, true);
+            }
+        }
+
+        // প্যাকেজ লোড
+        async function loadPackages() {
+            const res = await fetch('/api/packages');
+            const packages = await res.json();
+            const container = document.getElementById('packagesList');
+            container.innerHTML = packages.map(p => `
+                <tr class="border-b border-white/10">
+                    <td class="px-3 py-2 font-bold">লেভেল ${p.level}</td>
+                    <td class="px-3 py-2"><input type="number" id="price_${p.level}" value="${p.price}" class="w-24 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                    <td class="px-3 py-2"><input type="number" id="daily_${p.level}" value="${p.daily_tasks}" class="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                    <td class="px-3 py-2"><input type="number" id="rate_${p.level}" value="${p.task_rate}" class="w-20 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                    <td class="px-3 py-2"><input type="number" id="min_${p.level}" value="${p.min_withdraw}" class="w-24 px-2 py-1 rounded bg-white/10 border border-white/20 text-white"></td>
+                    <td class="px-3 py-2"><button onclick="updatePackage(${p.level})" class="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700">আপডেট</button></td>
+                </tr>
+            `).join('');
+        }
+
+        async function updatePackage(level) {
+            const price = document.getElementById(`price_${level}`).value;
+            const daily_tasks = document.getElementById(`daily_${level}`).value;
+            const task_rate = document.getElementById(`rate_${level}`).value;
+            const min_withdraw = document.getElementById(`min_${level}`).value;
+            
+            try {
+                const res = await fetch('/admin/update-package', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ level, price, daily_tasks, task_rate, min_withdraw })
+                });
+                if (res.ok) {
+                    showMessage('packageMsg', `লেভেল ${level} প্যাকেজ আপডেট করা হয়েছে!`);
+                } else {
+                    showMessage('packageMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
+                }
+            } catch(e) {
+                showMessage('packageMsg', e.message, true);
+            }
+        }
+
+        // রেফারেল রেট লোড
+        async function loadReferralRates() {
+            try {
+                const res = await fetch('/api/site-settings');
+                const data = await res.json();
+                if (data.referral_rates) {
+                    document.getElementById('gen1Rate').value = (data.referral_rates.gen1 * 100) || 10;
+                    document.getElementById('gen2Rate').value = (data.referral_rates.gen2 * 100) || 5;
+                    document.getElementById('gen3Rate').value = (data.referral_rates.gen3 * 100) || 2;
+                }
+            } catch(e) {
+                console.error('Error loading referral rates:', e);
+            }
+        }
+
+        async function updateReferralRates() {
+            const gen1 = parseFloat(document.getElementById('gen1Rate').value) / 100;
+            const gen2 = parseFloat(document.getElementById('gen2Rate').value) / 100;
+            const gen3 = parseFloat(document.getElementById('gen3Rate').value) / 100;
+            
+            try {
+                const res = await fetch('/admin/update-referral-rates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ gen1, gen2, gen3 })
+                });
+                if (res.ok) {
+                    showMessage('referralMsg', 'রেফারেল কমিশন হার আপডেট করা হয়েছে!');
+                } else {
+                    showMessage('referralMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
+                }
+            } catch(e) {
+                showMessage('referralMsg', e.message, true);
+            }
+        }
+
+        // ফেস ভেরিফিকেশন টগল
+        async function toggleFaceVerification() {
+            const enabled = document.getElementById('faceToggle').checked;
+            document.getElementById('faceToggleText').innerText = enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়';
+            
+            try {
+                const res = await fetch('/admin/toggle-face-verification', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ enabled })
+                });
+                if (res.ok) {
+                    showMessage('faceMsg', `ফেস ভেরিফিকেশন ${enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়'} করা হয়েছে!`);
+                } else {
+                    showMessage('faceMsg', 'আপডেট করতে সমস্যা হয়েছে', true);
+                    document.getElementById('faceToggle').checked = !enabled;
+                    document.getElementById('faceToggleText').innerText = !enabled ? 'সক্রিয়' : 'নিষ্ক্রিয়';
+                }
+            } catch(e) {
+                showMessage('faceMsg', e.message, true);
+            }
+        }
+
+        // কালার পিকারের sync
+        document.getElementById('themeColor')?.addEventListener('input', (e) => {
+            document.getElementById('themeColorHex').value = e.target.value;
+        });
+        document.getElementById('themeColorHex')?.addEventListener('input', (e) => {
+            document.getElementById('themeColor').value = e.target.value;
+        });
+
+        // পেজ লোড
+        loadSiteSettings();
+        loadPackages();
+        loadReferralRates();
+        
+        // প্রতি 30 সেকেন্ডে রিফ্রেশ
+        setInterval(() => {
+            loadPackages();
+        }, 30000);
+    </script>
+</body>
+</html>
