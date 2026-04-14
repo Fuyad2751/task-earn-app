@@ -991,3 +991,66 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ============ ফেস ভেরিফিকেশন API ============
+
+// ফেস ডিস্ক্রিপ্টর সেভ করার API
+app.post('/api/save-face-descriptor', authenticate, async (req, res) => {
+    const { descriptor } = req.body;
+    const userId = req.user.id;
+    
+    try {
+        // আগের ডাটা থাকলে ডিলিট করুন
+        await pool.query('DELETE FROM face_descriptors WHERE user_id = $1', [userId]);
+        
+        // নতুন ডাটা সেভ করুন
+        await pool.query(
+            'INSERT INTO face_descriptors (user_id, descriptor) VALUES ($1, $2)',
+            [userId, JSON.stringify(descriptor)]
+        );
+        
+        res.json({ success: true, message: 'ফেস নিবন্ধন সম্পন্ন!' });
+    } catch (err) {
+        console.error('Save face error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ফেস ম্যাচিং API
+app.post('/api/match-face', authenticate, async (req, res) => {
+    const { descriptor } = req.body;
+    const userId = req.user.id;
+    
+    try {
+        // ইউজারের সংরক্ষিত ফেস ডিস্ক্রিপ্টর বের করুন
+        const result = await pool.query(
+            'SELECT descriptor FROM face_descriptors WHERE user_id = $1',
+            [userId]
+        );
+        
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'আপনার ফেস নিবন্ধন নেই। প্রথমে নিবন্ধন করুন।' });
+        }
+        
+        const savedDescriptor = JSON.parse(result.rows[0].descriptor);
+        
+        // ইউক্লিডিয়ান দূরত্ব গণনা (দূরত্ব যত কম, মিল তত বেশি)
+        let distance = 0;
+        for (let i = 0; i < descriptor.length; i++) {
+            distance += Math.pow(descriptor[i] - savedDescriptor[i], 2);
+        }
+        distance = Math.sqrt(distance);
+        
+        // দূরত্ব 0.6 এর কম হলে মিলেছে (টিউন করা যায়)
+        const isMatch = distance < 0.6;
+        
+        res.json({ 
+            success: isMatch, 
+            distance: distance,
+            message: isMatch ? 'ভেরিফিকেশন সফল!' : 'মুখ মেলানো যায়নি!'
+        });
+        
+    } catch (err) {
+        console.error('Match face error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});

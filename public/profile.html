@@ -208,6 +208,9 @@
             </div>
         </div>
     </div>
+        <button onclick="registerFaceWithModal()" class="mt-4 w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3 rounded-xl hover:from-purple-600 hover:to-pink-600 transition shadow-lg">
+            <i class="fas fa-face-smile mr-2"></i> ফেস নিবন্ধন করুন
+        </button>
 
     <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
@@ -420,6 +423,14 @@
         setInterval(() => {
             loadProfile();
         }, 60000);
+             async function registerFaceWithModal() {
+        createFaceModal('ফেস নিবন্ধন', async () => {
+            const registered = await registerFace();
+            if (registered) {
+                alert('আপনার মুখ নিবন্ধন সম্পন্ন হয়েছে!');
+            }
+        });
+    }
     </script>
 </body>
 </html>

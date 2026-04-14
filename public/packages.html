@@ -6,6 +6,8 @@
     <title>প্যাকেজ সমূহ - টাস্ক কিং</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+    <script src="/face-verify.js"></script>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
 
@@ -208,40 +210,35 @@
         }
 
         async function buyPackage(level, price) {
-            const userLevel = parseInt(document.getElementById('userLevel').innerText);
-            if (userLevel >= level) {
-                alert(`আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন বা এর উপরে!`);
-                return;
-            }
-
-            const res = await fetch('/api/buy-package', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ level })
-            });
-            
-            const data = await res.json();
-            
-            if (data.success) {
-                showSuccessModal(data.message);
-                loadUserData();
-                setTimeout(() => location.reload(), 2000);
-            } else if (data.needBalance) {
-                currentPackage = { level, price, needAmount: data.needAmount };
-                document.getElementById('modalPackageLevel').innerText = level;
-                document.getElementById('modalPackagePrice').innerText = price;
-                document.getElementById('modalUserBalance').innerText = userBalance;
-                document.getElementById('modalNeedAmount').innerText = data.needAmount;
-                document.getElementById('paymentMethod').value = '';
-                document.getElementById('transactionId').value = '';
-                document.getElementById('paymentInstructions').classList.add('hidden');
-                document.getElementById('paymentModal').style.display = 'flex';
-                document.getElementById('paymentModal').classList.remove('hidden');
-            } else {
-                alert(data.error || 'দুঃখিত, সমস্যা হয়েছে');
-            }
+    const userLevel = parseInt(document.getElementById('userLevel').innerText);
+    if (userLevel >= level) {
+        alert(`আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন বা এর উপরে!`);
+        return;
+    }
+    
+    // ফেস ভেরিফিকেশন মডাল দেখান
+    createFaceModal('প্যাকেজ কেনার আগে ভেরিফিকেশন', async () => {
+        // ভেরিফিকেশন সফল হলে প্যাকেজ কেনার প্রক্রিয়া চালিয়ে যান
+        const verified = await verifyFace();
+        if (verified) {
+            // আসল প্যাকেজ কেনার কোড এখানে
+            proceedToBuyPackage(level, price);
         }
+    }, () => {
+        alert('প্যাকেজ ক্রয় বাতিল করা হয়েছে।');
+    });
+}
 
+async function proceedToBuyPackage(level, price) {
+    const res = await fetch('/api/buy-package', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ level })
+    });
+    
+    const data = await res.json();
+    // ... বাকি কোড
+}
         async function submitPaymentRequest() {
             const paymentMethod = document.getElementById('paymentMethod').value;
             const transactionId = document.getElementById('transactionId').value;
