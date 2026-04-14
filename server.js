@@ -1018,3 +1018,60 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.post('/api/buy-package', authenticate, async (req, res) => {
+  const { level } = req.body;
+  const userId = req.user.id;
+  
+  try {
+    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    
+    if (user.rows.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    const userLevel = user.rows[0].level;
+    
+    if (userLevel >= level) {
+      return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন!` });
+    }
+    
+    const pkg = await pool.query('SELECT price, expiry_days FROM level_packages WHERE level=$1', [level]);
+    const packagePrice = pkg.rows[0].price;
+    const expiryDays = pkg.rows[0].expiry_days || 0;
+    const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
+    
+    if (userBalance >= packagePrice) {
+      // ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
+      await pool.query('UPDATE users SET level = $1, purchase_date = NOW() WHERE id = $2', [level, userId]);
+      await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
+      await distributePackageCommission(userId, level, packagePrice);
+      
+      // মেয়াদ গণনা করুন
+      let expiryMessage = '';
+      if (expiryDays > 0) {
+        expiryMessage = ` এই প্যাকেজের মেয়াদ ${expiryDays} দিন। ক্রয় তারিখ: ${new Date().toLocaleDateString()}`;
+      }
+      
+      res.json({ 
+        success: true, 
+        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!${expiryMessage}`,
+        autoApproved: true,
+        expiryDays: expiryDays
+      });
+    } else {
+      const needAmount = packagePrice - userBalance;
+      res.json({ 
+        success: false, 
+        needBalance: true,
+        needAmount: needAmount,
+        packagePrice: packagePrice,
+        userBalance: userBalance,
+        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা পেমেন্ট করুন।`
+      });
+    }
+    
+  } catch (err) {
+    console.error('Package buy error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
