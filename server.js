@@ -1168,3 +1168,14 @@ app.get('/api/profile', authenticate, async (req, res) => {
   const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
   res.json({ ...user.rows[0], balance });
 });
+// মডেল ফাইলের জন্য সঠিক হেডার সেট করুন
+app.use('/models', express.static('public/models', {
+    setHeaders: (res, path) => {
+        if (path.endsWith('.json')) {
+            res.setHeader('Content-Type', 'application/json');
+        } else if (path.endsWith('.shard1') || path.endsWith('.shard2')) {
+            res.setHeader('Content-Type', 'application/octet-stream');
+        }
+        res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+}));

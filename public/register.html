@@ -41,7 +41,6 @@
                 <p class="text-white text-sm mb-2"><i class="fas fa-face-smile mr-2"></i> ফেস ভেরিফিকেশন বাধ্যতামূলক</p>
                 <div id="cameraContainer" class="relative">
                     <video id="faceVideo" autoplay playsinline class="w-full rounded-lg bg-black" style="min-height: 200px;"></video>
-                    <canvas id="faceCanvas" style="display: none;"></canvas>
                     <div id="faceStatus" class="absolute bottom-2 left-0 right-0 text-center text-white text-xs bg-black/50 p-1 rounded">ক্যামেরা চালু হচ্ছে...</div>
                 </div>
                 <button type="button" id="captureFaceBtn" class="mt-2 w-full bg-purple-600 text-white font-bold py-2 rounded-xl hover:bg-purple-700 transition" disabled>
@@ -72,26 +71,51 @@
         let stream = null;
         let modelsLoaded = false;
         
-        // ফেস মডেল লোড করুন
+        // ফেস মডেল লোড করুন (লোকাল পাথ ব্যবহার করে)
         async function loadModels() {
             try {
+                console.log('মডেল লোড শুরু...');
                 const modelsPath = '/models';
+                
+                // মডেল ফাইল চেক করুন
+                const checkFile = async (file) => {
+                    try {
+                        const res = await fetch(`${modelsPath}/${file}`);
+                        return res.ok;
+                    } catch(e) {
+                        return false;
+                    }
+                };
+                
+                const hasShard2 = await checkFile('face_recognition_model-shard2');
+                console.log('face_recognition_model-shard2 exists:', hasShard2);
+                
+                if (!hasShard2) {
+                    document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> মডেল ফাইল অনুপস্থিত!';
+                    console.error('Missing face_recognition_model-shard2');
+                    return;
+                }
+                
                 await faceapi.nets.tinyFaceDetector.loadFromUri(modelsPath);
+                console.log('✅ tinyFaceDetector লোডেড');
                 await faceapi.nets.faceLandmark68Net.loadFromUri(modelsPath);
+                console.log('✅ faceLandmark68Net লোডেড');
                 await faceapi.nets.faceRecognitionNet.loadFromUri(modelsPath);
-                console.log('✅ ফেস মডেল লোডেড');
+                console.log('✅ faceRecognitionNet লোডেড');
+                
                 modelsLoaded = true;
                 document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-check-circle mr-1"></i> মডেল লোড সম্পন্ন';
                 startWebcam();
             } catch (err) {
                 console.error('Model load error:', err);
-                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> মডেল লোড ব্যর্থ! পেজ রিফ্রেশ করুন।';
+                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> মডেল লোড ব্যর্থ! ' + err.message;
             }
         }
         
         // ওয়েবক্যাম শুরু করুন
         async function startWebcam() {
             try {
+                console.log('ক্যামেরা শুরু হচ্ছে...');
                 const videoElement = document.getElementById('faceVideo');
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { 
@@ -103,13 +127,13 @@
                 videoElement.srcObject = stream;
                 videoElement.onloadedmetadata = () => {
                     videoElement.play();
+                    console.log('ক্যামেরা চালু হয়েছে');
                     document.getElementById('faceStatus').innerHTML = 'মুখ ক্যামেরার সামনে রাখুন';
                     document.getElementById('captureFaceBtn').disabled = false;
                 };
             } catch (err) {
                 console.error('Webcam error:', err);
                 document.getElementById('faceStatus').innerHTML = 'ক্যামেরা অ্যাক্সেস দেওয়া হয়নি! ব্রাউজার সেটিংস চেক করুন।';
-                document.getElementById('loadingStatus').innerHTML = '<i class="fas fa-exclamation-circle mr-1"></i> ক্যামেরা প্রয়োজন!';
             }
         }
         
