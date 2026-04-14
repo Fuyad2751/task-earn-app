@@ -56,7 +56,6 @@
                     <p class="text-yellow-400 font-bold text-xl" id="modalNeedAmount">-</p>
                 </div>
                 
-                <!-- পেমেন্ট মেথড সিলেক্ট -->
                 <div>
                     <label class="block text-white mb-2">পেমেন্ট মেথড সিলেক্ট করুন</label>
                     <select id="paymentMethod" onchange="updatePaymentInstructions()" class="w-full px-4 py-3 rounded-xl bg-white/20 border border-white/30 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400">
@@ -67,12 +66,9 @@
                     </select>
                 </div>
                 
-                <!-- পেমেন্ট নির্দেশনা -->
                 <div id="paymentInstructions" class="hidden bg-blue-500/20 rounded-xl p-4 border border-blue-500/30">
                     <p class="text-blue-400 font-bold mb-2"><i class="fas fa-info-circle mr-2"></i> টাকা পাঠানোর নির্দেশনা:</p>
-                    <div id="instructionContent" class="text-white text-sm space-y-2">
-                        <!-- Dynamic content will appear here -->
-                    </div>
+                    <div id="instructionContent" class="text-white text-sm space-y-2"></div>
                 </div>
                 
                 <div>
@@ -88,7 +84,6 @@
         </div>
     </div>
 
-    <!-- Success Modal -->
     <div id="successModal" class="fixed inset-0 bg-black/70 backdrop-blur z-50 hidden items-center justify-center p-4">
         <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full text-center border border-gray-700">
             <div class="bg-green-500 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
@@ -99,7 +94,6 @@
         </div>
     </div>
 
-    <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 w-full bg-gray-900/90 backdrop-blur border-t border-gray-800 flex justify-around py-2">
         <a href="dashboard-home.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400"><i class="fas fa-home text-xl"></i><span class="text-xs">হোম</span></a>
         <a href="task-video.html" class="flex flex-col items-center text-gray-400 hover:text-yellow-400"><i class="fas fa-play-circle text-xl"></i><span class="text-xs">টাস্ক</span></a>
@@ -116,7 +110,6 @@
         let userBalance = 0;
         let currentPackage = null;
 
-        // পেমেন্ট নির্দেশনা আপডেট (আপনার নাম্বার 01701143360 বসানো হয়েছে)
         function updatePaymentInstructions() {
             const method = document.getElementById('paymentMethod').value;
             const instructionsDiv = document.getElementById('paymentInstructions');
@@ -128,29 +121,12 @@
             }
             
             instructionsDiv.classList.remove('hidden');
-            
-            if (method === 'bkash') {
-                contentDiv.innerHTML = `
-                    <p><i class="fab fa-bkash text-pink-400 mr-2"></i> <strong>বিকাশ (bKash)</strong></p>
-                    <p>নিচের নম্বরে প্রয়োজনীয় টাকা পাঠান:</p>
-                    <p class="bg-black/40 p-2 rounded text-center font-mono text-green-400 my-2 text-lg">01701143360</p>
-                    <p class="text-yellow-400 text-xs">⚠️ টাকা পাঠানোর পর নিচের ফিল্ডে ট্রানজাকশন আইডি দিন</p>
-                `;
-            } else if (method === 'nagad') {
-                contentDiv.innerHTML = `
-                    <p><i class="fab fa-nagad text-orange-400 mr-2"></i> <strong>নগদ (Nagad)</strong></p>
-                    <p>নিচের নম্বরে প্রয়োজনীয় টাকা পাঠান:</p>
-                    <p class="bg-black/40 p-2 rounded text-center font-mono text-green-400 my-2 text-lg">01701143360</p>
-                    <p class="text-yellow-400 text-xs">⚠️ টাকা পাঠানোর পর নিচের ফিল্ডে ট্রানজাকশন আইডি দিন</p>
-                `;
-            } else if (method === 'rocket') {
-                contentDiv.innerHTML = `
-                    <p><i class="fas fa-rocket text-blue-400 mr-2"></i> <strong>রকেট (Rocket)</strong></p>
-                    <p>নিচের নম্বরে প্রয়োজনীয় টাকা পাঠান:</p>
-                    <p class="bg-black/40 p-2 rounded text-center font-mono text-green-400 my-2 text-lg">01701143360</p>
-                    <p class="text-yellow-400 text-xs">⚠️ টাকা পাঠানোর পর নিচের ফিল্ডে ট্রানজাকশন আইডি দিন</p>
-                `;
-            }
+            contentDiv.innerHTML = `
+                <p><i class="fas fa-info-circle mr-2"></i> <strong>${method === 'bkash' ? 'বিকাশ' : method === 'nagad' ? 'নগদ' : 'রকেট'}</strong></p>
+                <p>নিচের নম্বরে প্রয়োজনীয় টাকা পাঠান:</p>
+                <p class="bg-black/40 p-2 rounded text-center font-mono text-green-400 my-2 text-lg">01701143360</p>
+                <p class="text-yellow-400 text-xs">⚠️ টাকা পাঠানোর পর নিচের ফিল্ডে ট্রানজাকশন আইডি দিন</p>
+            `;
         }
 
         async function loadUserData() {
@@ -210,35 +186,51 @@
         }
 
         async function buyPackage(level, price) {
-    const userLevel = parseInt(document.getElementById('userLevel').innerText);
-    if (userLevel >= level) {
-        alert(`আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন বা এর উপরে!`);
-        return;
-    }
-    
-    // ফেস ভেরিফিকেশন মডাল দেখান
-    createFaceModal('প্যাকেজ কেনার আগে ভেরিফিকেশন', async () => {
-        // ভেরিফিকেশন সফল হলে প্যাকেজ কেনার প্রক্রিয়া চালিয়ে যান
-        const verified = await verifyFace();
-        if (verified) {
-            // আসল প্যাকেজ কেনার কোড এখানে
-            proceedToBuyPackage(level, price);
+            const userLevel = parseInt(document.getElementById('userLevel').innerText);
+            if (userLevel >= level) {
+                alert(`আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন বা এর উপরে!`);
+                return;
+            }
+            
+            createFaceModal('প্যাকেজ কেনার আগে ভেরিফিকেশন', async () => {
+                const verified = await verifyFace();
+                if (verified) {
+                    await proceedToBuyPackage(level, price);
+                }
+            }, () => {
+                alert('প্যাকেজ ক্রয় বাতিল করা হয়েছে।');
+            });
         }
-    }, () => {
-        alert('প্যাকেজ ক্রয় বাতিল করা হয়েছে।');
-    });
-}
 
-async function proceedToBuyPackage(level, price) {
-    const res = await fetch('/api/buy-package', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ level })
-    });
-    
-    const data = await res.json();
-    // ... বাকি কোড
-}
+        async function proceedToBuyPackage(level, price) {
+            const res = await fetch('/api/buy-package', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ level })
+            });
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                showSuccessModal(data.message);
+                loadUserData();
+                setTimeout(() => location.reload(), 2000);
+            } else if (data.needBalance) {
+                currentPackage = { level, price, needAmount: data.needAmount };
+                document.getElementById('modalPackageLevel').innerText = level;
+                document.getElementById('modalPackagePrice').innerText = price;
+                document.getElementById('modalUserBalance').innerText = userBalance;
+                document.getElementById('modalNeedAmount').innerText = data.needAmount;
+                document.getElementById('paymentMethod').value = '';
+                document.getElementById('transactionId').value = '';
+                document.getElementById('paymentInstructions').classList.add('hidden');
+                document.getElementById('paymentModal').style.display = 'flex';
+                document.getElementById('paymentModal').classList.remove('hidden');
+            } else {
+                alert(data.error || 'দুঃখিত, সমস্যা হয়েছে');
+            }
+        }
+
         async function submitPaymentRequest() {
             const paymentMethod = document.getElementById('paymentMethod').value;
             const transactionId = document.getElementById('transactionId').value;
@@ -247,7 +239,6 @@ async function proceedToBuyPackage(level, price) {
                 alert('পেমেন্ট মেথড সিলেক্ট করুন!');
                 return;
             }
-            
             if (!transactionId) {
                 alert('ট্রানজাকশন আইডি দিন!');
                 return;
@@ -264,12 +255,12 @@ async function proceedToBuyPackage(level, price) {
                 })
             });
             
-            const data = await res.json();
             if (res.ok) {
                 closePaymentModal();
                 showSuccessModal(`${currentPackage.needAmount} টাকার পেমেন্ট রিকোয়েস্ট জমা হয়েছে! অ্যাডমিন যাচাই করবেন।`);
                 loadUserData();
             } else {
+                const data = await res.json();
                 alert(data.error || 'রিকোয়েস্ট জমা দিতে সমস্যা হয়েছে');
             }
         }
@@ -318,36 +309,6 @@ async function proceedToBuyPackage(level, price) {
 
         loadUserData();
         loadPackages();
-        async function buyPackage(level, price) {
-    // ফ্রন্টএন্ডের userLevel এর উপর নির্ভর না করে সরাসরি API কল করুন
-    const res = await fetch('/api/buy-package', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ level })
-    });
-    
-    const data = await res.json();
-    
-    if (data.success) {
-        showSuccessModal(data.message);
-        loadUserData();
-        setTimeout(() => location.reload(), 2000);
-    } else if (data.needBalance) {
-        // ব্যালেন্স কম - পেমেন্ট মডাল দেখান
-        currentPackage = { level, price, needAmount: data.needAmount };
-        document.getElementById('modalPackageLevel').innerText = level;
-        document.getElementById('modalPackagePrice').innerText = price;
-        document.getElementById('modalUserBalance').innerText = userBalance;
-        document.getElementById('modalNeedAmount').innerText = data.needAmount;
-        document.getElementById('paymentMethod').value = '';
-        document.getElementById('transactionId').value = '';
-        document.getElementById('paymentInstructions').classList.add('hidden');
-        document.getElementById('paymentModal').style.display = 'flex';
-        document.getElementById('paymentModal').classList.remove('hidden');
-    } else {
-        alert(data.error || 'দুঃখিত, সমস্যা হয়েছে');
-    }
-}
     </script>
 </body>
 </html>

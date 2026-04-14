@@ -6,6 +6,7 @@
     <title>উত্তোলন - টাস্ক কিং</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="/face-verify.js"></script>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
 
@@ -122,7 +123,6 @@
                 userBalance = data.balance;
                 userLevel = data.level;
                 
-                // লেভেল অনুযায়ী ন্যূনতম উত্তোলন বের করুন
                 const pkgRes = await fetch('/api/packages');
                 const packages = await pkgRes.json();
                 const userPackage = packages.find(p => p.level === userLevel);
@@ -241,43 +241,6 @@
         }
 
         loadUserData();
-        async function submitWithdraw() {
-    const amount = parseFloat(document.getElementById('withdrawAmount').value);
-    const withdrawPassword = document.getElementById('withdrawPassword').value;
-
-    if (!amount || amount < minWithdraw) {
-        showMessage(`ন্যূনতম উত্তোলন ${minWithdraw} টাকা`, 'error');
-        return;
-    }
-
-    if (!withdrawPassword) {
-        showMessage('উত্তোলন পাসওয়ার্ড দিন!', 'error');
-        return;
-    }
-    
-    // ফেস ভেরিফিকেশন প্রয়োজন
-    requireFaceVerification('উত্তোলন', async () => {
-        await proceedToWithdraw(amount, withdrawPassword);
-    });
-}
-
-async function proceedToWithdraw(amount, withdrawPassword) {
-    const res = await fetch('/api/request-withdraw', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ amount, withdrawPassword })
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-        showSuccessModal(data.message);
-        document.getElementById('withdrawAmount').value = '';
-        document.getElementById('withdrawPassword').value = '';
-        loadUserData();
-    } else {
-        showMessage(data.error, 'error');
-    }
-}
     </script>
 </body>
 </html>
