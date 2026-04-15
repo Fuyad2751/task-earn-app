@@ -66,11 +66,9 @@
                 <i class="fas fa-credit-card w-5"></i><span>প্যাকেজ পেমেন্ট</span>
                 <span id="packagePaymentCount" class="ml-auto bg-pink-500 text-white text-xs px-2 py-0.5 rounded-full">0</span>
             </div>
-            <!-- 👇 কন্ট্রোল প্যানেল মেনু -->
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="location.href='admin-control.html'">
                 <i class="fas fa-sliders-h w-5"></i><span>কন্ট্রোল প্যানেল</span>
             </div>
-            <!-- 👆 কন্ট্রোল প্যানেল মেনু -->
             <div class="nav-item cursor-pointer flex items-center gap-3 px-4 py-3 text-gray-300 hover:text-white rounded-lg" onclick="showSettings()">
                 <i class="fas fa-cog w-5"></i><span>সেটিংস</span>
             </div>
@@ -106,8 +104,31 @@
 
         <!-- Users Section -->
         <div id="usersSection" class="section hidden">
-            <div class="flex justify-between items-center mb-6"><h1 class="text-2xl md:text-3xl font-bold text-white">সকল ইউজার</h1><div class="relative"><i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i><input type="text" id="userSearch" placeholder="ইউজার খুঁজুন..." class="pl-10 pr-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400"></div></div>
-            <div class="bg-white/10 backdrop-blur rounded-xl overflow-hidden border border-white/20"><div class="overflow-x-auto"><table class="w-full text-white text-sm"><thead class="bg-white/20"><tr><th class="px-4 py-3 text-left">আইডি</th><th class="px-4 py-3 text-left">ইউজারনেম</th><th class="px-4 py-3 text-left">মোবাইল</th><th class="px-4 py-3 text-left">লেভেল</th><th class="px-4 py-3 text-left">ব্যালেন্স</th><th class="px-4 py-3 text-left">স্ট্যাটাস</th><th class="px-4 py-3 text-left">অ্যাকশন</th></tr></thead><tbody id="usersList"></tbody></table></div></div>
+            <div class="flex justify-between items-center mb-6">
+                <h1 class="text-2xl md:text-3xl font-bold text-white">সকল ইউজার</h1>
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" id="userSearch" placeholder="ইউজার খুঁজুন..." class="pl-10 pr-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-yellow-400">
+                </div>
+            </div>
+            <div class="bg-white/10 backdrop-blur rounded-xl overflow-hidden border border-white/20">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-white text-sm">
+                        <thead class="bg-white/20">
+                            <tr>
+                                <th class="px-4 py-3 text-left">আইডি</th>
+                                <th class="px-4 py-3 text-left">ইউজারনেম</th>
+                                <th class="px-4 py-3 text-left">মোবাইল</th>
+                                <th class="px-4 py-3 text-left">লেভেল</th>
+                                <th class="px-4 py-3 text-left">ব্যালেন্স</th>
+                                <th class="px-4 py-3 text-left">স্ট্যাটাস</th>
+                                <th class="px-4 py-3 text-left">অ্যাকশন</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersList"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         <!-- Packages Section -->
@@ -140,11 +161,36 @@
         </div>
     </div>
 
+    <!-- Reset Password Modal -->
+    <div id="resetPasswordModal" class="fixed inset-0 bg-black/70 backdrop-blur z-50 hidden items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-2xl p-6 max-w-md w-full border border-gray-700">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-bold text-white">পাসওয়ার্ড রিসেট</h3>
+                <button onclick="closeResetPasswordModal()" class="text-gray-400 hover:text-white">&times;</button>
+            </div>
+            <p class="text-gray-300 mb-2">ইউজার: <span id="resetUsername" class="text-yellow-400"></span></p>
+            <div class="mb-3">
+                <label class="block text-white mb-2">নতুন লগইন পাসওয়ার্ড</label>
+                <input type="text" id="newLoginPass" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white" placeholder="নতুন পাসওয়ার্ড">
+            </div>
+            <div class="mb-3">
+                <label class="block text-white mb-2">নতুন উত্তোলন পাসওয়ার্ড</label>
+                <input type="text" id="newWithdrawPass" class="w-full px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white" placeholder="নতুন পাসওয়ার্ড">
+            </div>
+            <div class="flex gap-3 mt-4">
+                <button onclick="resetUserPasswords()" class="flex-1 bg-green-600 text-white font-bold py-2 rounded-lg hover:bg-green-700 transition">রিসেট করুন</button>
+                <button onclick="closeResetPasswordModal()" class="flex-1 bg-gray-600 text-white font-bold py-2 rounded-lg hover:bg-gray-700 transition">বাতিল</button>
+            </div>
+            <div id="resetMsg" class="mt-3 text-sm hidden"></div>
+        </div>
+    </div>
+
     <script>
         const token = localStorage.getItem('authToken');
         if (!token) window.location.href = 'login.html';
 
         let currentUserId = null;
+        let resetUserId = null;
         let earningsChart = null;
 
         function logout() { localStorage.removeItem('authToken'); window.location.href = 'index.html'; }
@@ -178,7 +224,93 @@
         async function loadUsers() {
             const res = await fetch('/admin/users', { headers: { 'Authorization': `Bearer ${token}` } });
             const users = await res.json();
-            document.getElementById('usersList').innerHTML = users.map(u => `<tr class="border-b border-white/10"><td class="px-4 py-2">${u.id}</td><td class="px-4 py-2">${u.username}</td><td class="px-4 py-2">${u.mobile || '-'}</td><td class="px-4 py-2">লেভেল ${u.level}</td><td class="px-4 py-2">${(u.total_earnings || 0) - (u.total_withdrawn || 0)} টাকা</td><td class="px-4 py-2"><span class="px-2 py-1 rounded-full text-xs ${u.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${u.status === 'active' ? 'সক্রিয়' : 'নিষ্ক্রিয়'}</span></td><td class="px-4 py-2"><button onclick="toggleUserStatus(${u.id}, '${u.status}')" class="text-sm px-2 py-1 rounded ${u.status === 'active' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'}">${u.status === 'active' ? 'ব্লক' : 'আনব্লক'}</button><button onclick="openBalanceModal(${u.id}, '${u.username}', ${(u.total_earnings || 0) - (u.total_withdrawn || 0)})" class="text-sm px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 ml-1">ব্যালেন্স যোগ</button></td></tr>`).join('');
+            document.getElementById('usersList').innerHTML = users.map(u => `
+                <tr class="border-b border-white/10">
+                    <td class="px-4 py-2">${u.id}</td>
+                    <td class="px-4 py-2">${u.username}</td>
+                    <td class="px-4 py-2">${u.mobile || '-'}</td>
+                    <td class="px-4 py-2">লেভেল ${u.level}</td>
+                    <td class="px-4 py-2">${(u.total_earnings || 0) - (u.total_withdrawn || 0)} টাকা</td>
+                    <td class="px-4 py-2"><span class="px-2 py-1 rounded-full text-xs ${u.status === 'active' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}">${u.status === 'active' ? 'সক্রিয়' : 'নিষ্ক্রিয়'}</span></td>
+                    <td class="px-4 py-2">
+                        <button onclick="toggleUserStatus(${u.id}, '${u.status}')" class="text-sm px-2 py-1 rounded ${u.status === 'active' ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30' : 'bg-green-500/20 text-green-400 hover:bg-green-500/30'}">${u.status === 'active' ? 'ব্লক' : 'আনব্লক'}</button>
+                        <button onclick="openBalanceModal(${u.id}, '${u.username}', ${(u.total_earnings || 0) - (u.total_withdrawn || 0)})" class="text-sm px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 ml-1">ব্যালেন্স যোগ</button>
+                        <button onclick="openResetPasswordModal(${u.id}, '${u.username}')" class="text-sm px-2 py-1 rounded bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30 ml-1 mt-1">পাসওয়ার্ড রিসেট</button>
+                    </td>
+                 </tr>
+            `).join('');
+            
+            document.getElementById('userSearch').addEventListener('keyup', function() {
+                const searchTerm = this.value.toLowerCase();
+                const rows = document.querySelectorAll('#usersList tr');
+                rows.forEach(row => {
+                    const text = row.innerText.toLowerCase();
+                    row.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            });
+        }
+
+        function openResetPasswordModal(userId, username) {
+            resetUserId = userId;
+            document.getElementById('resetUsername').innerText = username;
+            document.getElementById('newLoginPass').value = '';
+            document.getElementById('newWithdrawPass').value = '';
+            document.getElementById('resetMsg').classList.add('hidden');
+            document.getElementById('resetPasswordModal').style.display = 'flex';
+            document.getElementById('resetPasswordModal').classList.remove('hidden');
+        }
+
+        function closeResetPasswordModal() {
+            document.getElementById('resetPasswordModal').style.display = 'none';
+            document.getElementById('resetPasswordModal').classList.add('hidden');
+        }
+
+        async function resetUserPasswords() {
+            const newLoginPass = document.getElementById('newLoginPass').value;
+            const newWithdrawPass = document.getElementById('newWithdrawPass').value;
+            
+            if (!newLoginPass && !newWithdrawPass) {
+                alert('কমপক্ষে একটি পাসওয়ার্ড দিন!');
+                return;
+            }
+            
+            const msgDiv = document.getElementById('resetMsg');
+            msgDiv.className = 'mt-3 text-center text-yellow-400';
+            msgDiv.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> প্রক্রিয়াকরণ হচ্ছে...';
+            msgDiv.classList.remove('hidden');
+            
+            try {
+                // লগইন পাসওয়ার্ড আপডেট
+                if (newLoginPass) {
+                    const loginRes = await fetch('/admin/reset-login-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ userId: resetUserId, newPassword: newLoginPass })
+                    });
+                    if (!loginRes.ok) throw new Error('লগইন পাসওয়ার্ড আপডেট ব্যর্থ');
+                }
+                
+                // উত্তোলন পাসওয়ার্ড আপডেট
+                if (newWithdrawPass) {
+                    const withdrawRes = await fetch('/admin/reset-withdraw-password', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                        body: JSON.stringify({ userId: resetUserId, newPassword: newWithdrawPass })
+                    });
+                    if (!withdrawRes.ok) throw new Error('উত্তোলন পাসওয়ার্ড আপডেট ব্যর্থ');
+                }
+                
+                msgDiv.className = 'mt-3 text-center text-green-400';
+                msgDiv.innerHTML = '<i class="fas fa-check-circle mr-2"></i> পাসওয়ার্ড রিসেট সম্পন্ন!';
+                setTimeout(() => {
+                    closeResetPasswordModal();
+                    loadUsers();
+                }, 1500);
+                
+            } catch(err) {
+                msgDiv.className = 'mt-3 text-center text-red-400';
+                msgDiv.innerHTML = '<i class="fas fa-exclamation-circle mr-2"></i> ' + err.message;
+            }
         }
 
         async function loadPackageRequests() {

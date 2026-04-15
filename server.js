@@ -1030,3 +1030,42 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ============ অ্যাডমিন: পাসওয়ার্ড রিসেট API ============
+
+// লগইন পাসওয়ার্ড রিসেট
+app.post('/admin/reset-login-password', authenticate, isAdmin, async (req, res) => {
+    const { userId, newPassword } = req.body;
+    
+    try {
+        if (!newPassword || newPassword.length < 4) {
+            return res.status(400).json({ error: 'পাসওয়ার্ড কমপক্ষে 4 অক্ষরের হতে হবে!' });
+        }
+        
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hashedPassword, userId]);
+        
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// উত্তোলন পাসওয়ার্ড রিসেট
+app.post('/admin/reset-withdraw-password', authenticate, isAdmin, async (req, res) => {
+    const { userId, newPassword } = req.body;
+    
+    try {
+        if (!newPassword || newPassword.length < 4) {
+            return res.status(400).json({ error: 'পাসওয়ার্ড কমপক্ষে 4 অক্ষরের হতে হবে!' });
+        }
+        
+        await pool.query(
+            'UPDATE withdrawal_accounts SET withdraw_password = $1 WHERE user_id = $2 AND is_active = true',
+            [newPassword, userId]
+        );
+        
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
