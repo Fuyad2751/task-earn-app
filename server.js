@@ -16,7 +16,6 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
-// মডেল ফাইলের জন্য সঠিক হেডার সেট করুন
 app.use('/models', express.static('public/models', {
     setHeaders: (res, path) => {
         if (path.endsWith('.json')) {
@@ -52,6 +51,28 @@ async function isAdmin(req, res, next) {
   res.status(403).json({ error: 'Admin only' });
 }
 
+// এলোমেলো ভিডিও লিস্ট
+const videoList = [
+    'https://www.youtube.com/embed/dQw4w9WgXcQ',
+    'https://www.youtube.com/embed/9bZkp7q19f0',
+    'https://www.youtube.com/embed/YVkUvmDQ3HY',
+    'https://www.youtube.com/embed/RzVvThnjY3A',
+    'https://www.youtube.com/embed/kJQP7kiw5Fk',
+    'https://www.youtube.com/embed/OpQFFLBMEPI',
+    'https://www.youtube.com/embed/fJ9rUzIMcZQ',
+    'https://www.youtube.com/embed/LXb3EKWsInQ',
+    'https://www.youtube.com/embed/6Dh-RL__uN4',
+    'https://www.youtube.com/embed/1S1L8fE7X6Y',
+    'https://www.youtube.com/embed/2T5_0AGdFic',
+    'https://www.youtube.com/embed/3U7W5eM9K8o',
+    'https://www.youtube.com/embed/4V8jL5nN2pQ',
+    'https://www.youtube.com/embed/5W9T6nX8K4o',
+    'https://www.youtube.com/embed/6Xp7YqZ3L2m',
+    'https://www.youtube.com/embed/7Yq8Zr4M3nN',
+    'https://www.youtube.com/embed/8Zr9As5N4oO',
+    'https://www.youtube.com/embed/9As0Bt6O5pP'
+];
+
 // ============ সাইট সেটিংস API ============
 app.get('/api/site-settings', async (req, res) => {
     try {
@@ -72,7 +93,7 @@ app.get('/api/face-verification-status', async (req, res) => {
     }
 });
 
-// ============ রেজিস্ট্রেশন API (লেভেল 0 দিয়ে) ============
+// ============ রেজিস্ট্রেশন API ============
 app.post('/api/register', async (req, res) => {
     const { username, password, mobile, referralCode, faceDescriptor } = req.body;
     
@@ -100,7 +121,6 @@ app.post('/api/register', async (req, res) => {
             if (refUser.rows.length > 0) referrerId = refUser.rows[0].id;
         }
         
-        // ✅ লেভেল 0 দিয়ে ইউজার তৈরি করুন (এখানে 1 এর জায়গায় 0 বসান)
         const result = await pool.query(
             `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at, purchase_date) 
              VALUES ($1, $2, $3, $4, $5, 0, 0, 0, 'active', NOW(), NOW()) RETURNING id`,
@@ -143,7 +163,7 @@ app.get('/api/packages', async (req, res) => {
   res.json(packages.rows);
 });
 
-// ============ টাস্ক API (লেভেল 0 সাপোর্ট সহ) ============
+// ============ টাস্ক API (এলোমেলো ভিডিও সহ) ============
 app.get('/api/my-tasks', authenticate, async (req, res) => {
   const userId = req.user.id;
   
@@ -151,8 +171,6 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     const user = await pool.query('SELECT level FROM users WHERE id = $1', [userId]);
     const userLevel = user.rows[0].level;
     
-    // ✅ লেভেল 0 এর জন্য প্যাকেজ চেক করবেন না
-    // শুধু লেভেল 1 এর জন্য প্যাকেজ চেক করুন
     if (userLevel === 1) {
       const hasPackage = await pool.query(
         'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
@@ -184,14 +202,20 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     );
     const completedIds = completed.rows.map(r => r.task_id);
     
-    const tasksWithData = tasks.rows.map(t => ({
-      ...t,
-      completed: completedIds.includes(t.id),
-      task_rate: parseFloat(t.task_rate),
-      video_url: t.video_url || 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-      question: t.question || 'ভিডিওটি সম্পর্কে আপনার মতামত কী?',
-      options: t.options || ['ভিডিওটি ভালো ছিল', 'ভিডিওটি তথ্যমূলক ছিল', 'ভিডিওটি দরকারী ছিল', 'ভিডিওটি চমৎকার ছিল']
-    }));
+    // প্রতিটি টাস্কের জন্য এলোমেলো ভিডিও নির্বাচন করুন
+    const tasksWithData = tasks.rows.map((t, index) => {
+      const videoIndex = (t.id + index) % videoList.length;
+      const randomVideo = t.video_url || videoList[videoIndex];
+      
+      return {
+        ...t,
+        completed: completedIds.includes(t.id),
+        task_rate: parseFloat(t.task_rate),
+        video_url: randomVideo,
+        question: t.question || `ভিডিও ${index + 1} সম্পর্কে আপনার মতামত কী?`,
+        options: t.options || ['ভিডিওটি ভালো ছিল', 'ভিডিওটি তথ্যমূলক ছিল', 'ভিডিওটি দরকারী ছিল', 'ভিডিওটি চমৎকার ছিল']
+      };
+    });
     
     res.json(tasksWithData);
     
@@ -246,7 +270,7 @@ app.post('/api/complete-task', authenticate, async (req, res) => {
   }
 });
 
-// ============ প্যাকেজ ক্রয় API (লেভেল 0 থেকে আপগ্রেড) ============
+// ============ প্যাকেজ ক্রয় API ============
 app.post('/api/buy-package', authenticate, async (req, res) => {
   const { level } = req.body;
   const userId = req.user.id;
@@ -270,7 +294,6 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
     const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
     
     if (userBalance >= packagePrice) {
-      // ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
       await pool.query('UPDATE users SET level = $1, purchase_date = NOW() WHERE id = $2', [level, userId]);
       await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
       await distributePackageCommission(userId, level, packagePrice);
@@ -886,7 +909,6 @@ app.post('/admin/toggle-face-verification', authenticate, isAdmin, async (req, r
     }
 });
 
-// নতুন লেভেল যোগ করুন
 app.post('/admin/add-new-level', authenticate, isAdmin, async (req, res) => {
     const { level, price, daily_tasks, task_rate, min_withdraw } = req.body;
     try {
@@ -895,7 +917,6 @@ app.post('/admin/add-new-level', authenticate, isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ইউজার লেভেল পরিবর্তন করুন
 app.post('/admin/change-user-level', authenticate, isAdmin, async (req, res) => {
     const { userId, level } = req.body;
     try {
@@ -904,7 +925,6 @@ app.post('/admin/change-user-level', authenticate, isAdmin, async (req, res) => 
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// প্যাকেজ মেয়াদ নির্ধারণ করুন
 app.post('/admin/set-package-expiry', authenticate, isAdmin, async (req, res) => {
     const { level, expiry_days } = req.body;
     try {
@@ -913,7 +933,6 @@ app.post('/admin/set-package-expiry', authenticate, isAdmin, async (req, res) =>
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// সবাইকে বিজ্ঞপ্তি দিন
 app.post('/admin/send-notification-to-all', authenticate, isAdmin, async (req, res) => {
     const { title, message } = req.body;
     try {
@@ -922,7 +941,6 @@ app.post('/admin/send-notification-to-all', authenticate, isAdmin, async (req, r
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// নির্দিষ্ট ইউজারকে বিজ্ঞপ্তি দিন
 app.post('/admin/send-notification-to-user', authenticate, isAdmin, async (req, res) => {
     const { userId, title, message } = req.body;
     try {
@@ -931,7 +949,6 @@ app.post('/admin/send-notification-to-user', authenticate, isAdmin, async (req, 
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ইউজারের নোটিফিকেশন দেখার API
 app.get('/api/my-notifications', authenticate, async (req, res) => {
     const userId = req.user.id;
     try {
@@ -947,7 +964,6 @@ app.get('/api/my-notifications', authenticate, async (req, res) => {
     }
 });
 
-// ইউজারের টাস্ক বন্ধ/চালু করুন
 app.post('/admin/block-user-tasks', authenticate, isAdmin, async (req, res) => {
     const { userId, blocked } = req.body;
     try {
@@ -956,7 +972,6 @@ app.post('/admin/block-user-tasks', authenticate, isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// সবাইকে বন্ধ করুন
 app.post('/admin/block-all-users', authenticate, isAdmin, async (req, res) => {
     try {
         await pool.query('UPDATE users SET tasks_blocked = true WHERE role != $1', ['admin']);
@@ -964,7 +979,6 @@ app.post('/admin/block-all-users', authenticate, isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// নির্দিষ্ট তারিখে বন্ধ রাখুন
 app.post('/admin/block-on-date', authenticate, isAdmin, async (req, res) => {
     const { date, blocked } = req.body;
     try {
@@ -973,7 +987,6 @@ app.post('/admin/block-on-date', authenticate, isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============ চেক ইউজার টাস্ক করতে পারবে কিনা (লেভেল 0 সাপোর্ট সহ) ============
 app.get('/api/can-do-task', authenticate, async (req, res) => {
     const userId = req.user.id;
     
@@ -1003,7 +1016,6 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
         
         const userLevel = user.rows[0].level;
         
-        // ✅ লেভেল 0 এর জন্য প্যাকেজ চেক করবেন না (সরাসরি টাস্ক করতে পারবে)
         if (userLevel === 1) {
             const hasPackage = await pool.query(
                 'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
@@ -1027,12 +1039,7 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
     }
 });
 
-// ============ সার্ভার স্টার্ট ============
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 // ============ অ্যাডমিন: পাসওয়ার্ড রিসেট API ============
-
-// লগইন পাসওয়ার্ড রিসেট
 app.post('/admin/reset-login-password', authenticate, isAdmin, async (req, res) => {
     const { userId, newPassword } = req.body;
     
@@ -1050,7 +1057,6 @@ app.post('/admin/reset-login-password', authenticate, isAdmin, async (req, res) 
     }
 });
 
-// উত্তোলন পাসওয়ার্ড রিসেট
 app.post('/admin/reset-withdraw-password', authenticate, isAdmin, async (req, res) => {
     const { userId, newPassword } = req.body;
     
@@ -1069,18 +1075,23 @@ app.post('/admin/reset-withdraw-password', authenticate, isAdmin, async (req, re
         res.status(500).json({ error: err.message });
     }
 });
+
 // ============ অ্যাডমিন: ইউজার ডিলিট API ============
 app.delete('/admin/delete-user', authenticate, isAdmin, async (req, res) => {
     const { userId } = req.body;
+    console.log('🔴 Delete request received for userId:', userId);
     
     try {
-        // চেক করুন ইউজার অ্যাডমিন কিনা (অ্যাডমিন ডিলিট করা যাবে না)
         const user = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+        console.log('User role:', user.rows[0]?.role);
+        
+        if (user.rows.length === 0) {
+            return res.status(404).json({ error: 'ইউজার পাওয়া যায়নি!' });
+        }
         if (user.rows[0]?.role === 'admin') {
             return res.status(400).json({ error: 'অ্যাডমিন ইউজার ডিলিট করা যাবে না!' });
         }
         
-        // সম্পর্কিত সব টেবিল থেকে ডাটা ডিলিট করুন
         await pool.query('DELETE FROM face_descriptors WHERE user_id = $1', [userId]);
         await pool.query('DELETE FROM referral_commissions WHERE referrer_id = $1 OR referred_user_id = $1', [userId]);
         await pool.query('DELETE FROM user_daily_tasks WHERE user_id = $1', [userId]);
@@ -1090,7 +1101,6 @@ app.delete('/admin/delete-user', authenticate, isAdmin, async (req, res) => {
         await pool.query('DELETE FROM withdrawal_accounts WHERE user_id = $1', [userId]);
         await pool.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
         
-        // সবশেষে ইউজার ডিলিট করুন
         await pool.query('DELETE FROM users WHERE id = $1', [userId]);
         
         res.json({ success: true, message: 'ইউজার সফলভাবে ডিলিট করা হয়েছে!' });
@@ -1099,3 +1109,7 @@ app.delete('/admin/delete-user', authenticate, isAdmin, async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// ============ সার্ভার স্টার্ট ============
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
