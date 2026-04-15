@@ -301,8 +301,12 @@
         function updateProfileUI() {
             document.getElementById('profileUsername').innerText = userData.username || '-';
             document.getElementById('userId').innerText = userData.id || '-';
-            document.getElementById('userLevel').innerText = userData.level || 1;
-            document.getElementById('infoLevel').innerText = userData.level || 1;
+            
+            // ✅ লেভেল 0 সঠিকভাবে দেখানোর জন্য ফিক্স
+            const userLevel = (userData.level === 0 || userData.level === 1) ? userData.level : (userData.level || 1);
+            document.getElementById('userLevel').innerText = userLevel;
+            document.getElementById('infoLevel').innerText = userLevel;
+            
             document.getElementById('referralCode').innerText = userData.referral_code || '-';
             document.getElementById('refCodeDisplay').innerText = userData.referral_code || '-';
             document.getElementById('infoUsername').innerText = userData.username || '-';
