@@ -72,7 +72,7 @@ app.get('/api/face-verification-status', async (req, res) => {
     }
 });
 
-// ============ রেজিস্ট্রেশন API ============
+// ============ রেজিস্ট্রেশন API (লেভেল 0 দিয়ে) ============
 app.post('/api/register', async (req, res) => {
     const { username, password, mobile, referralCode, faceDescriptor } = req.body;
     
@@ -100,9 +100,10 @@ app.post('/api/register', async (req, res) => {
             if (refUser.rows.length > 0) referrerId = refUser.rows[0].id;
         }
         
+        // ✅ লেভেল 0 দিয়ে ইউজার তৈরি করুন
         const result = await pool.query(
-            `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at) 
-             VALUES ($1, $2, $3, $4, $5, 1, 0, 0, 'active', NOW()) RETURNING id`,
+            `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at, purchase_date) 
+             VALUES ($1, $2, $3, $4, $5, 0, 0, 0, 'active', NOW(), NOW()) RETURNING id`,
             [username, hashed, mobile, refCode, referrerId]
         );
         
@@ -142,7 +143,7 @@ app.get('/api/packages', async (req, res) => {
   res.json(packages.rows);
 });
 
-// ============ টাস্ক API ============
+// ============ টাস্ক API (লেভেল 0 সাপোর্ট সহ) ============
 app.get('/api/my-tasks', authenticate, async (req, res) => {
   const userId = req.user.id;
   
@@ -150,6 +151,8 @@ app.get('/api/my-tasks', authenticate, async (req, res) => {
     const user = await pool.query('SELECT level FROM users WHERE id = $1', [userId]);
     const userLevel = user.rows[0].level;
     
+    // ✅ লেভেল 0 এর জন্য প্যাকেজ চেক করবেন না
+    // শুধু লেভেল 1 এর জন্য প্যাকেজ চেক করুন
     if (userLevel === 1) {
       const hasPackage = await pool.query(
         'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
@@ -243,13 +246,13 @@ app.post('/api/complete-task', authenticate, async (req, res) => {
   }
 });
 
-// ============ প্যাকেজ ক্রয় API ============
+// ============ প্যাকেজ ক্রয় API (লেভেল 0 থেকে আপগ্রেড) ============
 app.post('/api/buy-package', authenticate, async (req, res) => {
   const { level } = req.body;
   const userId = req.user.id;
   
   try {
-    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
+    const user = await pool.query('SELECT level, total_earnings, total_withdrawn, purchase_date FROM users WHERE id=$1', [userId]);
     
     if (user.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' });
@@ -261,19 +264,27 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
       return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন!` });
     }
     
-    const pkg = await pool.query('SELECT price FROM level_packages WHERE level=$1', [level]);
+    const pkg = await pool.query('SELECT price, expiry_days FROM level_packages WHERE level=$1', [level]);
     const packagePrice = pkg.rows[0].price;
+    const expiryDays = pkg.rows[0].expiry_days || 0;
     const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
     
     if (userBalance >= packagePrice) {
-      await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
+      // ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
+      await pool.query('UPDATE users SET level = $1, purchase_date = NOW() WHERE id = $2', [level, userId]);
       await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
       await distributePackageCommission(userId, level, packagePrice);
       
+      let expiryMessage = '';
+      if (expiryDays > 0) {
+        expiryMessage = ` এই প্যাকেজের মেয়াদ ${expiryDays} দিন। ক্রয় তারিখ: ${new Date().toLocaleDateString()}`;
+      }
+      
       res.json({ 
         success: true, 
-        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!`,
-        autoApproved: true
+        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!${expiryMessage}`,
+        autoApproved: true,
+        expiryDays: expiryDays
       });
     } else {
       const needAmount = packagePrice - userBalance;
@@ -296,7 +307,7 @@ app.post('/api/buy-package', authenticate, async (req, res) => {
 // ============ প্রোফাইল API ============
 app.get('/api/profile', authenticate, async (req, res) => {
   const user = await pool.query(
-    'SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, profile_pic, created_at FROM users WHERE id=$1',
+    'SELECT id, username, mobile, level, total_earnings, total_withdrawn, status, referral_code, profile_pic, created_at, purchase_date FROM users WHERE id=$1',
     [req.user.id]
   );
   const balance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
@@ -516,7 +527,7 @@ app.post('/admin/approve-package', authenticate, isAdmin, async (req, res) => {
     
     const { user_id, level, amount } = request.rows[0];
     
-    await pool.query('UPDATE users SET level=$1 WHERE id=$2 AND level<$1', [level, user_id]);
+    await pool.query('UPDATE users SET level=$1, purchase_date=NOW() WHERE id=$2 AND level<$1', [level, user_id]);
     await pool.query('UPDATE purchase_requests SET status=$1, verified_at=NOW() WHERE id=$2', ['approved', requestId]);
     
     await distributePackageCommission(user_id, level, amount);
@@ -888,7 +899,7 @@ app.post('/admin/add-new-level', authenticate, isAdmin, async (req, res) => {
 app.post('/admin/change-user-level', authenticate, isAdmin, async (req, res) => {
     const { userId, level } = req.body;
     try {
-        await pool.query('UPDATE users SET level = $1 WHERE id = $2', [level, userId]);
+        await pool.query('UPDATE users SET level = $1, purchase_date = NOW() WHERE id = $2', [level, userId]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -962,7 +973,7 @@ app.post('/admin/block-on-date', authenticate, isAdmin, async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ============ চেক ইউজার টাস্ক করতে পারবে কিনা (আপডেটেড) ============
+// ============ চেক ইউজার টাস্ক করতে পারবে কিনা (লেভেল 0 সাপোর্ট সহ) ============
 app.get('/api/can-do-task', authenticate, async (req, res) => {
     const userId = req.user.id;
     
@@ -992,6 +1003,7 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
         
         const userLevel = user.rows[0].level;
         
+        // ✅ লেভেল 0 এর জন্য প্যাকেজ চেক করবেন না (সরাসরি টাস্ক করতে পারবে)
         if (userLevel === 1) {
             const hasPackage = await pool.query(
                 'SELECT id FROM purchase_requests WHERE user_id = $1 AND level = 1 AND status = $2',
@@ -1018,60 +1030,3 @@ app.get('/api/can-do-task', authenticate, async (req, res) => {
 // ============ সার্ভার স্টার্ট ============
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-app.post('/api/buy-package', authenticate, async (req, res) => {
-  const { level } = req.body;
-  const userId = req.user.id;
-  
-  try {
-    const user = await pool.query('SELECT level, total_earnings, total_withdrawn FROM users WHERE id=$1', [userId]);
-    
-    if (user.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    
-    const userLevel = user.rows[0].level;
-    
-    if (userLevel >= level) {
-      return res.status(400).json({ error: `আপনি ইতিমধ্যে লেভেল ${userLevel} এ আছেন!` });
-    }
-    
-    const pkg = await pool.query('SELECT price, expiry_days FROM level_packages WHERE level=$1', [level]);
-    const packagePrice = pkg.rows[0].price;
-    const expiryDays = pkg.rows[0].expiry_days || 0;
-    const userBalance = user.rows[0].total_earnings - user.rows[0].total_withdrawn;
-    
-    if (userBalance >= packagePrice) {
-      // ব্যালেন্স suficiente - অটোমেটিক লেভেল আপগ্রেড
-      await pool.query('UPDATE users SET level = $1, purchase_date = NOW() WHERE id = $2', [level, userId]);
-      await pool.query('UPDATE users SET total_withdrawn = total_withdrawn + $1 WHERE id = $2', [packagePrice, userId]);
-      await distributePackageCommission(userId, level, packagePrice);
-      
-      // মেয়াদ গণনা করুন
-      let expiryMessage = '';
-      if (expiryDays > 0) {
-        expiryMessage = ` এই প্যাকেজের মেয়াদ ${expiryDays} দিন। ক্রয় তারিখ: ${new Date().toLocaleDateString()}`;
-      }
-      
-      res.json({ 
-        success: true, 
-        message: `অভিনন্দন! আপনি লেভেল ${level} এ আপগ্রেড হয়েছেন!${expiryMessage}`,
-        autoApproved: true,
-        expiryDays: expiryDays
-      });
-    } else {
-      const needAmount = packagePrice - userBalance;
-      res.json({ 
-        success: false, 
-        needBalance: true,
-        needAmount: needAmount,
-        packagePrice: packagePrice,
-        userBalance: userBalance,
-        message: `আপনার ব্যালেন্স কম। ${needAmount} টাকা পেমেন্ট করুন।`
-      });
-    }
-    
-  } catch (err) {
-    console.error('Package buy error:', err);
-    res.status(500).json({ error: err.message });
-  }
-});
