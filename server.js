@@ -1069,3 +1069,33 @@ app.post('/admin/reset-withdraw-password', authenticate, isAdmin, async (req, re
         res.status(500).json({ error: err.message });
     }
 });
+// ============ অ্যাডমিন: ইউজার ডিলিট API ============
+app.delete('/admin/delete-user', authenticate, isAdmin, async (req, res) => {
+    const { userId } = req.body;
+    
+    try {
+        // চেক করুন ইউজার অ্যাডমিন কিনা (অ্যাডমিন ডিলিট করা যাবে না)
+        const user = await pool.query('SELECT role FROM users WHERE id = $1', [userId]);
+        if (user.rows[0]?.role === 'admin') {
+            return res.status(400).json({ error: 'অ্যাডমিন ইউজার ডিলিট করা যাবে না!' });
+        }
+        
+        // সম্পর্কিত সব টেবিল থেকে ডাটা ডিলিট করুন
+        await pool.query('DELETE FROM face_descriptors WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM referral_commissions WHERE referrer_id = $1 OR referred_user_id = $1', [userId]);
+        await pool.query('DELETE FROM user_daily_tasks WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM purchase_requests WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM withdrawal_requests WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM balance_requests WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM withdrawal_accounts WHERE user_id = $1', [userId]);
+        await pool.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+        
+        // সবশেষে ইউজার ডিলিট করুন
+        await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+        
+        res.json({ success: true, message: 'ইউজার সফলভাবে ডিলিট করা হয়েছে!' });
+    } catch (err) {
+        console.error('Delete user error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
