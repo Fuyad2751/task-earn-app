@@ -100,7 +100,7 @@ app.post('/api/register', async (req, res) => {
             if (refUser.rows.length > 0) referrerId = refUser.rows[0].id;
         }
         
-        // ✅ লেভেল 0 দিয়ে ইউজার তৈরি করুন
+        // ✅ লেভেল 0 দিয়ে ইউজার তৈরি করুন (এখানে 1 এর জায়গায় 0 বসান)
         const result = await pool.query(
             `INSERT INTO users (username, password_hash, mobile, referral_code, referrer_id, level, total_earnings, total_withdrawn, status, created_at, purchase_date) 
              VALUES ($1, $2, $3, $4, $5, 0, 0, 0, 'active', NOW(), NOW()) RETURNING id`,
