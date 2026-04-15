@@ -6,8 +6,6 @@
     <title>প্যাকেজ সমূহ - টাস্ক কিং</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
-    <script src="/face-verify.js"></script>
 </head>
 <body class="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 min-h-screen pb-24">
 
@@ -142,7 +140,7 @@
         async function loadPackages() {
             const res = await fetch('/api/packages');
             let packages = await res.json();
-            // ✅ লেভেল 0 প্যাকেজ বাদ দিন (শুধু লেভেল 1-5 দেখান)
+            // লেভেল 0 প্যাকেজ বাদ দিন (শুধু লেভেল 1-5 দেখান)
             packages = packages.filter(p => p.level > 0);
             
             const container = document.getElementById('packagesList');
@@ -181,7 +179,7 @@
                             <p class="text-2xl font-bold text-green-400">${(p.daily_tasks * p.task_rate) * 30} টাকা</p>
                         </div>
                     </div>
-                    <!-- ✅ মেয়াদ দেখানোর অংশ -->
+                    <!-- মেয়াদ দেখানোর অংশ -->
                     <div class="mt-3 text-center">
                         ${p.expiry_days && p.expiry_days > 0 ? `<span class="text-xs text-gray-400"><i class="fas fa-calendar-alt mr-1"></i> মেয়াদ: ${p.expiry_days} দিন</span>` : '<span class="text-xs text-gray-400"><i class="fas fa-infinity mr-1"></i> মেয়াদ: আজীবন</span>'}
                     </div>
@@ -192,6 +190,7 @@
             `).join('');
         }
 
+        // ✅ আপডেটেড buyPackage ফাংশন (ফেস ভেরিফিকেশন ছাড়া)
         async function buyPackage(level, price) {
             const userLevel = parseInt(document.getElementById('userLevel').innerText);
             if (userLevel >= level) {
@@ -199,14 +198,8 @@
                 return;
             }
             
-            createFaceModal('প্যাকেজ কেনার আগে ভেরিফিকেশন', async () => {
-                const verified = await verifyFace();
-                if (verified) {
-                    await proceedToBuyPackage(level, price);
-                }
-            }, () => {
-                alert('প্যাকেজ ক্রয় বাতিল করা হয়েছে।');
-            });
+            // সরাসরি প্যাকেজ কেনার প্রক্রিয়া শুরু করুন (ফেস ভেরিফিকেশন ছাড়া)
+            await proceedToBuyPackage(level, price);
         }
 
         async function proceedToBuyPackage(level, price) {
