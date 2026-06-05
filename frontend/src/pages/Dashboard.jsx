@@ -14,225 +14,126 @@ function Dashboard() {
 
   useEffect(() => {
     const userData = authService.getCurrentUser()
-    if (!userData) {
-      navigate('/login')
-    } else {
-      setUser(userData)
-    }
+    if (!userData) navigate('/login')
+    else setUser(userData)
   }, [navigate])
 
-  const handleLogout = () => {
-    authService.logout()
-    navigate('/login')
-  }
-
-  const handleAddMoney = () => {
-    if (!amount || amount < 100) {
-      setMessage('Minimum amount is ৳100')
-      return
-    }
-    setMessage(`Please send ৳${amount} to our ${paymentMethod} number: 01XXXXXXXXX`)
-    setShowAddMoney(false)
-    setAmount('')
-  }
-
-  const handleWithdraw = () => {
-    if (!amount || amount < 100) {
-      setMessage('Minimum withdrawal is ৳100')
-      return
-    }
-    if (!accountNumber) {
-      setMessage('Please enter your account number')
-      return
-    }
-    setMessage(`Withdrawal request of ৳${amount} submitted successfully!`)
-    setShowWithdraw(false)
-    setAmount('')
-    setAccountNumber('')
-  }
+  const handleLogout = () => { authService.logout(); navigate('/login') }
 
   if (!user) return null
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navbar */}
-      <nav className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-2xl font-bold text-blue-600">TaskEarn</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button onClick={() => navigate('/packages')} className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Packages</button>
-              <button onClick={() => navigate('/tasks')} className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Tasks</button>
-              <button onClick={() => navigate('/profile')} className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">Profile</button>
-              <button onClick={handleLogout} className="bg-red-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-600">Logout</button>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[#0a0a0a] bg-grid">
+  {/* Navbar */}
+  <nav className="glass-dark border-b border-cyan-500/30 sticky top-0 z-40">
+    <div className="max-w-7xl mx-auto px-4 flex justify-between h-16 items-center">
+      <h1 className="text-2xl font-bold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 neon-text cursor-pointer" onClick={() => navigate('/dashboard')}>
+        TASK<span className="text-white">EARN</span>
+      </h1>
+      
+      <div className="flex items-center gap-1">
+        <button onClick={() => navigate('/dashboard')} className="text-cyan-400 hover:text-white px-4 py-2 rounded-lg text-sm font-orbitron tracking-wider transition-all hover:bg-cyan-500/20 border border-transparent hover:border-cyan-500/50">
+          🏠 HOME
+        </button>
+        <button onClick={() => navigate('/tasks')} className="text-blue-400 hover:text-white px-4 py-2 rounded-lg text-sm font-orbitron tracking-wider transition-all hover:bg-blue-500/20 border border-transparent hover:border-blue-500/50">
+          📋 TASKS
+        </button>
+        <button onClick={() => navigate('/packages')} className="text-green-400 hover:text-white px-4 py-2 rounded-lg text-sm font-orbitron tracking-wider transition-all hover:bg-green-500/20 border border-transparent hover:border-green-500/50">
+          💎 PACKAGES
+        </button>
+        <button onClick={() => navigate('/profile')} className="text-purple-400 hover:text-white px-4 py-2 rounded-lg text-sm font-orbitron tracking-wider transition-all hover:bg-purple-500/20 border border-transparent hover:border-purple-500/50">
+          👤 PROFILE
+        </button>
+        <button onClick={handleLogout} className="bg-red-500/20 border border-red-500/50 text-red-400 hover:text-white px-5 py-2 rounded-lg text-sm font-orbitron tracking-wider hover:bg-red-500/40 transition-all ml-2">
+          ⏻ EXIT
+        </button>
+      </div>
+    </div>
+  </nav>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto py-6 px-4">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Welcome, {user.fullName}!</h2>
+      <div className="max-w-7xl mx-auto py-8 px-4">
+        <h2 className="text-3xl font-bold font-orbitron text-white mb-2">Welcome, <span className="text-cyan-400 neon-text">{user.fullName}</span></h2>
+        <p className="text-gray-400 mb-8">Your earning dashboard</p>
 
         {message && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4">
-            {message}
-            <button onClick={() => setMessage('')} className="float-right font-bold">&times;</button>
+          <div className="bg-cyan-500/20 border border-cyan-500/50 text-cyan-400 px-4 py-3 rounded-xl mb-6 flex justify-between items-center">
+            <span>✅ {message}</span>
+            <button onClick={() => setMessage('')} className="text-white font-bold">&times;</button>
           </div>
         )}
 
-        {/* Stats Cards */}
+        {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-600">Current Balance</h3>
-            <p className="text-3xl font-bold text-blue-600 mt-2">৳{user.balance || 0}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-600">Total Earnings</h3>
-            <p className="text-3xl font-bold text-green-600 mt-2">৳{user.totalEarnings || 0}</p>
-          </div>
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-600">Completed Tasks</h3>
-            <p className="text-3xl font-bold text-purple-600 mt-2">{user.completedTasks || 0}</p>
-          </div>
+          {[
+            { label: 'Balance', value: `৳${user.balance || 0}`, color: 'cyan' },
+            { label: 'Earnings', value: `৳${user.totalEarnings || 0}`, color: 'green' },
+            { label: 'Tasks Done', value: user.completedTasks || 0, color: 'purple' }
+          ].map((stat, i) => (
+            <div key={i} className={`glass rounded-2xl p-6 border border-${stat.color}-500/30 neon-border text-${stat.color}-400 hover:scale-105 transition-transform`}>
+              <p className="text-gray-400 text-sm font-orbitron tracking-wider">{stat.label}</p>
+              <p className="text-4xl font-bold font-orbitron mt-2">{stat.value}</p>
+            </div>
+          ))}
         </div>
 
-        {/* Add Money & Withdraw Buttons */}
+        {/* Action Buttons */}
         <div className="grid grid-cols-2 gap-4 mb-8">
-          <button
-            onClick={() => setShowAddMoney(true)}
-            className="bg-green-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-green-700 transition shadow-lg"
-          >
-            💰 Add Money
-          </button>
-          <button
-            onClick={() => setShowWithdraw(true)}
-            className="bg-orange-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-orange-700 transition shadow-lg"
-          >
-            💸 Withdraw
-          </button>
+          <button onClick={() => setShowAddMoney(true)} className="glass border border-cyan-500/50 text-cyan-400 py-5 rounded-2xl font-bold font-orbitron text-lg hover:shadow-[0_0_30px_rgba(0,255,255,0.3)] transition-all">💰 ADD FUNDS</button>
+          <button onClick={() => setShowWithdraw(true)} className="glass border border-pink-500/50 text-pink-400 py-5 rounded-2xl font-bold font-orbitron text-lg hover:shadow-[0_0_30px_rgba(236,72,153,0.3)] transition-all">💸 WITHDRAW</button>
         </div>
 
-        {/* Add Money Modal */}
+        {/* Modals */}
         {showAddMoney && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-md mx-4">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">Add Money</h3>
-              
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2">Amount (৳)</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="Enter amount (min ৳100)"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-gray-700 text-sm font-semibold mb-2">Payment Method</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500"
-                >
-                  <option value="bkash">bKash</option>
-                  <option value="nagad">Nagad</option>
-                  <option value="rocket">Rocket</option>
-                  <option value="bank">Bank Transfer</option>
-                </select>
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleAddMoney}
-                  className="flex-1 bg-green-600 text-white py-3 rounded-xl font-semibold hover:bg-green-700"
-                >
-                  Confirm
-                </button>
-                <button
-                  onClick={() => setShowAddMoney(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-dark rounded-3xl p-8 w-full max-w-md border border-cyan-500/30 neon-border text-cyan-400">
+              <h3 className="text-2xl font-bold font-orbitron mb-6">ADD FUNDS</h3>
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-black/50 border border-cyan-500/50 rounded-xl px-4 py-3 text-white mb-4 focus:outline-none focus:border-cyan-400" placeholder="Amount (min ৳100)" />
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full bg-black/50 border border-cyan-500/50 rounded-xl px-4 py-3 text-white mb-6 focus:outline-none">
+                <option value="bkash">bKash</option>
+                <option value="nagad">Nagad</option>
+                <option value="rocket">Rocket</option>
+              </select>
+              <div className="flex gap-3">
+                <button onClick={() => { setMessage(`Send ৳${amount} to our ${paymentMethod} number`); setShowAddMoney(false) }} className="flex-1 bg-cyan-500/20 border border-cyan-500 text-cyan-400 py-3 rounded-xl font-orbitron font-bold hover:bg-cyan-500/30">CONFIRM</button>
+                <button onClick={() => setShowAddMoney(false)} className="flex-1 bg-gray-500/20 border border-gray-500 text-gray-400 py-3 rounded-xl font-orbitron">CANCEL</button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Withdraw Modal */}
         {showWithdraw && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 w-full max-w-md mx-4">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6">Withdraw Money</h3>
-              
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2">Amount (৳)</label>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  placeholder="Enter amount (min ৳100)"
-                />
-                <p className="text-sm text-gray-500 mt-1">Available Balance: ৳{user.balance || 0}</p>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-semibold mb-2">Payment Method</label>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                >
-                  <option value="bkash">bKash</option>
-                  <option value="nagad">Nagad</option>
-                  <option value="rocket">Rocket</option>
-                  <option value="bank">Bank Transfer</option>
-                </select>
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-gray-700 text-sm font-semibold mb-2">Account Number</label>
-                <input
-                  type="text"
-                  value={accountNumber}
-                  onChange={(e) => setAccountNumber(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500"
-                  placeholder="Enter your account number"
-                />
-              </div>
-
-              <div className="flex space-x-3">
-                <button
-                  onClick={handleWithdraw}
-                  className="flex-1 bg-orange-600 text-white py-3 rounded-xl font-semibold hover:bg-orange-700"
-                >
-                  Submit
-                </button>
-                <button
-                  onClick={() => setShowWithdraw(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-400"
-                >
-                  Cancel
-                </button>
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="glass-dark rounded-3xl p-8 w-full max-w-md border border-pink-500/30 neon-border text-pink-400">
+              <h3 className="text-2xl font-bold font-orbitron mb-6">WITHDRAW</h3>
+              <input type="number" value={amount} onChange={e => setAmount(e.target.value)} className="w-full bg-black/50 border border-pink-500/50 rounded-xl px-4 py-3 text-white mb-4 focus:outline-none" placeholder="Amount (min ৳100)" />
+              <select value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)} className="w-full bg-black/50 border border-pink-500/50 rounded-xl px-4 py-3 text-white mb-4 focus:outline-none">
+                <option value="bkash">bKash</option>
+                <option value="nagad">Nagad</option>
+                <option value="rocket">Rocket</option>
+              </select>
+              <input type="text" value={accountNumber} onChange={e => setAccountNumber(e.target.value)} className="w-full bg-black/50 border border-pink-500/50 rounded-xl px-4 py-3 text-white mb-6 focus:outline-none" placeholder="Account number" />
+              <div className="flex gap-3">
+                <button onClick={() => { setMessage('Withdrawal request submitted!'); setShowWithdraw(false) }} className="flex-1 bg-pink-500/20 border border-pink-500 text-pink-400 py-3 rounded-xl font-orbitron font-bold hover:bg-pink-500/30">SUBMIT</button>
+                <button onClick={() => setShowWithdraw(false)} className="flex-1 bg-gray-500/20 border border-gray-500 text-gray-400 py-3 rounded-xl font-orbitron">CANCEL</button>
               </div>
             </div>
           </div>
         )}
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-xl font-bold text-gray-800 mb-4">Quick Actions</h3>
+        <div className="glass rounded-2xl p-6 border border-purple-500/20">
+          <h3 className="text-xl font-bold font-orbitron text-purple-400 mb-4">QUICK ACTIONS</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <button onClick={() => navigate('/tasks')} className="bg-blue-600 text-white p-4 rounded-lg hover:bg-blue-700 transition">View Tasks</button>
-            <button onClick={() => navigate('/packages')} className="bg-green-600 text-white p-4 rounded-lg hover:bg-green-700 transition">Buy Package</button>
-            <button onClick={() => navigate('/profile')} className="bg-purple-600 text-white p-4 rounded-lg hover:bg-purple-700 transition">My Profile</button>
-            <button onClick={() => setShowWithdraw(true)} className="bg-orange-600 text-white p-4 rounded-lg hover:bg-orange-700 transition">Withdraw</button>
+            {[
+              { label: 'TASKS', path: '/tasks', color: 'blue' },
+              { label: 'PACKAGES', path: '/packages', color: 'green' },
+              { label: 'PROFILE', path: '/profile', color: 'purple' },
+              { label: 'WITHDRAW', onClick: () => setShowWithdraw(true), color: 'pink' }
+            ].map((btn, i) => (
+              <button key={i} onClick={btn.onClick || (() => navigate(btn.path))} className={`glass border border-${btn.color}-500/30 text-${btn.color}-400 py-4 rounded-xl font-orbitron font-bold hover:shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all`}>
+                {btn.label}
+              </button>
+            ))}
           </div>
         </div>
       </div>
