@@ -1,31 +1,25 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables
 dotenv.config();
 
-// Import routes
 const authRoutes = require('./src/routes/authRoutes');
 const userRoutes = require('./src/routes/userRoutes');
 const taskRoutes = require('./src/routes/taskRoutes');
 const packageRoutes = require('./src/routes/packageRoutes');
 const paymentRoutes = require('./src/routes/paymentRoutes');
 
-// Initialize express app
 const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
@@ -35,7 +29,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/payments', paymentRoutes);
 
-// Health check route
+// Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ 
     success: true, 
@@ -44,7 +38,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({
@@ -53,19 +47,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Database connection and server start
 const PORT = process.env.PORT || 5000;
-
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/task_earning_app')
-  .then(() => {
-    console.log('✅ MongoDB Connected Successfully');
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('❌ MongoDB Connection Error:', err.message);
-    process.exit(1);
-  });
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📦 Using Supabase Database`);
+});
 
 module.exports = app;

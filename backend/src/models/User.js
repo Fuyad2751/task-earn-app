@@ -1,97 +1,73 @@
-const mongoose = require('mongoose');
+const supabase = require('../config/database');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
-  fullName: {
-    type: String,
-    required: [true, 'Full name is required'],
-    trim: true
-  },
-  email: {
-    type: String,
-    required: [true, 'Email is required'],
-    unique: true,
-    lowercase: true,
-    trim: true
-  },
-  phone: {
-    type: String,
-    required: [true, 'Phone number is required'],
-    trim: true
-  },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: 6
-  },
-  avatar: {
-    type: String,
-    default: 'default-avatar.png'
-  },
-  balance: {
-    type: Number,
-    default: 0
-  },
-  totalEarnings: {
-    type: Number,
-    default: 0
-  },
-  completedTasks: {
-    type: Number,
-    default: 0
-  },
-  activePackage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Package'
-  },
-  referralCode: {
-    type: String,
-    unique: true
-  },
-  referredBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
-  },
-  role: {
-    type: String,
-    enum: ['user', 'admin'],
-    default: 'user'
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
-  lastLogin: Date
-}, {
-  timestamps: true
-});
+class User {
+  static async create(userData) {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(userData.password, salt);
+    
+    const { data, error } = await supabase
+      .from('users')
+      .insert([{
+        full_name: userData.fullName,
+        email: userData.email,
+        phone: userData.phone,
+        password: hashedPassword,
+        referral_code: 'REF' + Math.random().toString(36).substring(2, 10).toUpperCase(),
+        referred_by: userData.referredBy || null
+      }])
+      .select()
+      .single();
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
-    next();
+    if (error) throw error;
+    return data;
   }
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-});
 
-// Compare password method
-userSchema.methods.comparePassword = async function(enteredPassword) {
-  return await bcrypt.compare(enteredPassword, this.password);
-};
+  static async findByEmail(email) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', email)
+      .single();
 
-// Generate referral code
-userSchema.pre('save', function(next) {
-  if (!this.referralCode) {
-    this.referralCode = 'REF' + Math.random().toString(36).substring(2, 10).toUpperCase();
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
   }
-  next();
-});
 
-module.exports = mongoose.model('User', userSchema);
+  static async findById(id) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*, active_package:packages(*)')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  static async findByReferralCode(code) {
+    const { data, error } = await supabase
+      .from('users')
+      .select('id')
+      .eq('referral_code', code)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error;
+    return data;
+  }
+
+  static async comparePassword(plainPassword, hashedPassword) {
+    return await bcrypt.compare(plainPassword, hashedPassword);
+  }
+
+  static async updateLastLogin(id) {
+    const { error } = await supabase
+      .from('users')
+      .update({ last_login: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) throw error;
+  }
+}
+
+module.exports = User;

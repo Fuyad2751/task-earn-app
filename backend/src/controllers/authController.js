@@ -3,8 +3,6 @@ const { generateToken } = require('../utils/jwtHelper');
 const { sendResponse, sendError } = require('../utils/responseHelper');
 const { validationResult } = require('express-validator');
 
-// @desc    Register user
-// @route   POST /api/auth/register
 const register = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -14,33 +12,32 @@ const register = async (req, res) => {
 
     const { fullName, email, phone, password, referralCode } = req.body;
 
-    const existingUser = await User.findOne({ $or: [{ email }, { phone }] });
+    const existingUser = await User.findByEmail(email);
     if (existingUser) {
-      return sendError(res, 400, 'User already exists with this email or phone');
+      return sendError(res, 400, 'User already exists with this email');
     }
 
-    const userData = { fullName, email, phone, password };
-
+    let referredBy = null;
     if (referralCode) {
-      const referrer = await User.findOne({ referralCode });
+      const referrer = await User.findByReferralCode(referralCode);
       if (referrer) {
-        userData.referredBy = referrer._id;
+        referredBy = referrer.id;
       }
     }
 
-    const user = await User.create(userData);
-    const token = generateToken(user._id);
+    const user = await User.create({ fullName, email, phone, password, referredBy });
+    const token = generateToken(user.id);
 
     sendResponse(res, 201, true, 'Registration successful', {
       user: {
-        _id: user._id,
-        fullName: user.fullName,
+        id: user.id,
+        fullName: user.full_name,
         email: user.email,
         phone: user.phone,
         balance: user.balance,
-        totalEarnings: user.totalEarnings,
-        completedTasks: user.completedTasks,
-        referralCode: user.referralCode,
+        totalEarnings: user.total_earnings,
+        completedTasks: user.completed_tasks,
+        referralCode: user.referral_code,
         role: user.role
       },
       token
@@ -51,8 +48,6 @@ const register = async (req, res) => {
   }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
 const login = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -62,35 +57,29 @@ const login = async (req, res) => {
 
     const { email, password } = req.body;
 
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findByEmail(email);
     if (!user) {
       return sendError(res, 401, 'Invalid email or password');
     }
 
-    if (!user.isActive) {
-      return sendError(res, 401, 'Account is deactivated. Contact support.');
-    }
-
-    const isMatch = await user.comparePassword(password);
+    const isMatch = await User.comparePassword(password, user.password);
     if (!isMatch) {
       return sendError(res, 401, 'Invalid email or password');
     }
 
-    user.lastLogin = new Date();
-    await user.save();
-
-    const token = generateToken(user._id);
+    await User.updateLastLogin(user.id);
+    const token = generateToken(user.id);
 
     sendResponse(res, 200, true, 'Login successful', {
       user: {
-        _id: user._id,
-        fullName: user.fullName,
+        id: user.id,
+        fullName: user.full_name,
         email: user.email,
         phone: user.phone,
         balance: user.balance,
-        totalEarnings: user.totalEarnings,
-        completedTasks: user.completedTasks,
-        referralCode: user.referralCode,
+        totalEarnings: user.total_earnings,
+        completedTasks: user.completed_tasks,
+        referralCode: user.referral_code,
         role: user.role,
         avatar: user.avatar
       },
@@ -102,11 +91,9 @@ const login = async (req, res) => {
   }
 };
 
-// @desc    Get current user profile
-// @route   GET /api/auth/profile
 const getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user._id).populate('activePackage');
+    const user = await User.findById(req.user.id);
     if (!user) {
       return sendError(res, 404, 'User not found');
     }
